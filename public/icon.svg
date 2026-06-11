@@ -1,60 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
 
   <!-- 背景：深い紺 -->
-  <rect width="192" height="192" rx="40" fill="#0C1E30"/>
+  <rect width="192" height="192" rx="36" fill="#0D2137"/>
 
-  <!-- 水中の光のゆらぎ -->
-  <rect x="28"  y="0" width="14" height="192" rx="7"  fill="#1A3D58" opacity="0.22"/>
-  <rect x="76"  y="0" width="8"  height="192" rx="4"  fill="#1A3D58" opacity="0.16"/>
-  <rect x="118" y="0" width="18" height="192" rx="9"  fill="#1A3D58" opacity="0.18"/>
-  <rect x="162" y="0" width="10" height="192" rx="5"  fill="#1A3D58" opacity="0.14"/>
+  <!-- 泡（左上、輪郭のみ） -->
+  <circle cx="52" cy="42" r="9"  fill="none" stroke="#4ECFCC" stroke-width="3"/>
+  <circle cx="36" cy="58" r="6"  fill="none" stroke="#4ECFCC" stroke-width="2.5"/>
 
-  <!-- 海底 -->
-  <rect x="0" y="158" width="192" height="34" rx="0" fill="#0F2A1E"/>
-  <ellipse cx="36"  cy="160" rx="28" ry="9"  fill="#0D2419" opacity="0.8"/>
-  <ellipse cx="108" cy="163" rx="36" ry="8"  fill="#0D2419" opacity="0.7"/>
-  <ellipse cx="170" cy="160" rx="22" ry="8"  fill="#0D2419" opacity="0.8"/>
+  <!-- 魚の胴体（楕円） -->
+  <ellipse cx="84" cy="96" rx="56" ry="40" fill="#14ADAA"/>
 
-  <!-- 海草：三角形の積み木 -->
-  <polygon points="20,158 30,158 25,122" fill="#16502E" opacity="0.85"/>
-  <polygon points="28,158 36,158 32,136" fill="#16502E" opacity="0.70"/>
-  <polygon points="14,158 22,158 18,142" fill="#1A6038" opacity="0.60"/>
+  <!-- 尻尾（黄色の三角・右向き） -->
+  <polygon points="134,70 134,122 162,96" fill="#F5A830"/>
 
-  <polygon points="162,158 172,158 167,118" fill="#16502E" opacity="0.85"/>
-  <polygon points="154,158 162,158 158,138" fill="#16502E" opacity="0.70"/>
-  <polygon points="170,158 178,158 174,140" fill="#1A6038" opacity="0.60"/>
-
-  <!-- サンゴ：小さい三角 -->
-  <polygon points="84,158 96,158 90,140"  fill="#1E6640" opacity="0.75"/>
-  <polygon points="90,158 100,158 95,146" fill="#1E6640" opacity="0.65"/>
-
-  <!-- 尾びれ：三角2枚でフォーク -->
-  <polygon points="48,96 48,58 16,36"  fill="#0E3D4A"/>
-  <polygon points="48,96 48,134 16,156" fill="#0E3D4A"/>
-
-  <!-- 魚の胴体：大きな三角形（主） -->
-  <polygon points="155,96 48,56 48,136" fill="#175E6A"/>
-
-  <!-- 胴体上面ハイライト（立体感） -->
-  <polygon points="155,96 48,56 101,96" fill="#1F7280" opacity="0.75"/>
-
-  <!-- 胴体下面シャドウ（立体感） -->
-  <polygon points="155,96 48,136 101,96" fill="#0E3D4A" opacity="0.40"/>
-
-  <!-- 内側のファセット（鱗っぽい三角の切れ目） -->
-  <polygon points="101,96 101,68 128,96"  fill="#1F7280" opacity="0.30"/>
-  <polygon points="101,96 101,124 128,96" fill="#0E3D4A" opacity="0.25"/>
-
-  <!-- 背びれ：三角 -->
-  <polygon points="70,56 106,56 88,36" fill="#0E3D4A"/>
-
-  <!-- 腹びれ：小さい三角 -->
-  <polygon points="74,136 96,136 85,152" fill="#0E3D4A"/>
-
-  <!-- 泡 -->
-  <circle cx="148" cy="52" r="5" fill="#CDEAEA" opacity="0.20"/>
-  <circle cx="160" cy="34" r="3" fill="#CDEAEA" opacity="0.14"/>
-  <circle cx="140" cy="34" r="2" fill="#CDEAEA" opacity="0.12"/>
-  <circle cx="152" cy="70" r="3" fill="#CDEAEA" opacity="0.16"/>
+  <!-- 目（白い丸） -->
+  <circle cx="58" cy="88" r="11" fill="white"/>
 
 </svg>
