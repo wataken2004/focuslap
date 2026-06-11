@@ -132,6 +132,26 @@ export default function FocusLapApp() {
   const growthOf = (taskId) => data.sessions.filter((s) => s.taskId === taskId).length;
   const goFocus = (id) => { setFocusTaskId(id); setTab("focus"); };
 
+  // カレンダー同期用にGoogleカレンダーのスコープを追加で要求
+  const requestCalendarAccess = async () => {
+    try {
+      const { signInWithPopup, GoogleAuthProvider } = await import("firebase/auth");
+      const { auth } = await import("./firebase.js");
+      const provider = new GoogleAuthProvider();
+      provider.addScope("https://www.googleapis.com/auth/calendar.events");
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        sessionStorage.setItem("focuslap:gat", credential.accessToken);
+        setGoogleAccessToken(credential.accessToken);
+        return true;
+      }
+    } catch (e) {
+      console.error("Calendar auth failed", e);
+    }
+    return false;
+  };
+
   const titles = { focus: "集中する", tasks: "タスク", cal: "カレンダー", goals: "目標・仕事", tank: "水槽" };
 
   return (
@@ -172,7 +192,7 @@ export default function FocusLapApp() {
           <FocusTab data={data} update={update} growthOf={growthOf} taskId={focusTaskId} setTaskId={setFocusTaskId} />
         )}
         {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
-        {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} googleAccessToken={googleAccessToken} />}
+        {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} googleAccessToken={googleAccessToken} onRequestCalendarAccess={requestCalendarAccess} />}
         {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
         {tab === "tank"  && <TankTab data={data} update={update} />}
       </main>

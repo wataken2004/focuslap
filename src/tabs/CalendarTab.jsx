@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { C, fmt, todayStr, addDays, TaskRow, TaskForm } from "../shared.jsx";
 import { listCalendarEvents, createCalendarEvent } from "../googleCalendar.js";
 
-export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken }) {
+export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken, onRequestCalendarAccess }) {
   const [view, setView] = useState("month");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(todayStr());
@@ -107,13 +107,23 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
       {/* Googleカレンダー同期トグル */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", background: C.card, borderRadius: 12, border: `1px solid ${C.line}` }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: C.ink, flex: 1 }}>📅 Googleカレンダーと同期</span>
-        {googleAccessToken ? (
-          <button onClick={() => setGcalSync((s) => !s)}
-            style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: gcalSync ? C.deepAqua : C.line, color: gcalSync ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-            {gcalSync ? "ON" : "OFF"}
+        {gcalSync ? (
+          <button onClick={() => setGcalSync(false)}
+            style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: C.deepAqua, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+            ON
           </button>
         ) : (
-          <span style={{ fontSize: 11, color: C.sub }}>Googleログインが必要です</span>
+          <button onClick={async () => {
+            if (!googleAccessToken) {
+              const ok = await onRequestCalendarAccess?.();
+              if (ok) setGcalSync(true);
+            } else {
+              setGcalSync(true);
+            }
+          }}
+            style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: C.line, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+            {googleAccessToken ? "OFF" : "連携する"}
+          </button>
         )}
       </div>
       {gcalError && <div style={{ fontSize: 12, color: C.red, marginBottom: 10 }}>{gcalError}</div>}
