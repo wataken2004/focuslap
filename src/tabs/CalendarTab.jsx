@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { C, fmt, todayStr, addDays, TaskRow, TaskForm } from "../shared.jsx";
+import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
 import { listCalendarEvents, createCalendarEvent } from "../googleCalendar.js";
 
 export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken, onRequestCalendarAccess }) {
@@ -180,13 +180,34 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
       )}
 
       {/* Googleカレンダーのイベント */}
-      {selGcal.map((ev) => (
-        <div key={ev.id} style={{ background: "#EEF3FF", border: "1px solid #C5D3F0", borderRadius: 14, padding: "10px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 16 }}>📅</span>
-          <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#2A4080" }}>{ev.title}</div>
-          <span style={{ fontSize: 10, color: "#4285F4" }}>Googleカレンダー</span>
-        </div>
-      ))}
+      {selGcal.map((ev) => {
+        const alreadyAdded = data.tasks.some((t) => t.title === ev.title && t.due === ev.date);
+        return (
+          <div key={ev.id} style={{ background: "#EEF3FF", border: "1px solid #C5D3F0", borderRadius: 14, padding: "10px 14px", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 16 }}>📅</span>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#2A4080" }}>{ev.title}</div>
+              <span style={{ fontSize: 10, color: "#4285F4" }}>Googleカレンダー</span>
+            </div>
+            <div style={{ marginTop: 8, textAlign: "right" }}>
+              {alreadyAdded ? (
+                <span style={{ fontSize: 11, color: C.sub }}>✓ タスクに追加済み</span>
+              ) : (
+                <button
+                  onClick={() => {
+                    update((d) => {
+                      d.tasks.unshift({ id: uid(), title: ev.title, goalId: null, due: ev.date, done: false });
+                      return d;
+                    });
+                  }}
+                  style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  ＋ タスクに追加
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
 
       {selTasks.length === 0 && selGcal.length === 0 && !showForm && (
         <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "24px 0" }}>この日の予定はまだありません。</div>
