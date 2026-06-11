@@ -24,6 +24,64 @@ const beep = () => {
   } catch { /* 非対応ブラウザは無視 */ }
 };
 
+// 獲得ファンファーレ（ド→ミ→ソ→ド の上昇アルペジオ）
+const chime = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[523.25, 0], [659.25, 0.12], [783.99, 0.24], [1046.5, 0.36]].forEach(([f, t]) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.5);
+      o.start(ctx.currentTime + t);
+      o.stop(ctx.currentTime + t + 0.55);
+    });
+  } catch { /* 非対応ブラウザは無視 */ }
+};
+
+/* ---- 魚獲得のお祝いオーバーレイ ---- */
+function Celebration({ fish, name, count, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3200);
+    return () => clearTimeout(t);
+  }, []);
+  const pieces = useMemo(() => [...Array(20)].map((_, i) => ({
+    left: Math.random() * 100,
+    delay: Math.random() * 0.8,
+    dur: 1.6 + Math.random() * 1.4,
+    color: ["#F5BE3D", "#14A3A1", "#7FD6D4", "#E05B5B", "#FFFFFF"][i % 5],
+    size: 6 + Math.random() * 6,
+    round: i % 3 === 0,
+  })), []);
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(6,18,32,0.80)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden" }}>
+      <style>{`
+        @keyframes celebPop  { 0%{transform:scale(0) rotate(-20deg);opacity:0} 60%{transform:scale(1.25) rotate(6deg)} 100%{transform:scale(1) rotate(0)} }
+        @keyframes celebFall { 0%{transform:translateY(-12vh) rotate(0)} 100%{transform:translateY(110vh) rotate(720deg)} }
+        @keyframes celebRing { 0%{transform:scale(.4);opacity:.8} 100%{transform:scale(2.4);opacity:0} }
+        @keyframes celebBob  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+      `}</style>
+      {pieces.map((p, i) => (
+        <div key={i} style={{ position: "absolute", top: 0, left: `${p.left}%`, width: p.size, height: p.size, background: p.color, borderRadius: p.round ? 999 : 2, animation: `celebFall ${p.dur}s linear ${p.delay}s forwards` }} />
+      ))}
+      <div style={{ textAlign: "center", animation: "celebPop .55s cubic-bezier(.2,1.4,.4,1) both" }}>
+        <div style={{ position: "relative", display: "inline-block" }}>
+          <div style={{ position: "absolute", inset: -18, borderRadius: 999, border: "3px solid #F5BE3D", animation: "celebRing 1.2s ease-out .15s infinite" }} />
+          <div style={{ fontSize: 84, animation: "celebBob 2s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(245,190,61,.85))" }}>{fish}</div>
+        </div>
+        <div style={{ marginTop: 16, fontSize: 12, letterSpacing: ".3em", color: "#F5BE3D", fontWeight: 800 }}>NEW CATCH!</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", marginTop: 4 }}>{name}を獲得！</div>
+        <div style={{ fontSize: 13, color: "#9FD9D8", marginTop: 6 }}>通算 {count} 匹目</div>
+        <div style={{ fontSize: 11, color: "#7593A8", marginTop: 16 }}>タップで閉じる</div>
+      </div>
+    </div>
+  );
+}
+
 export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const { settings } = data;
   const [mode, setMode] = useState("work");
@@ -31,32 +89,48 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const [running, setRunning] = useState(false);
   const [quickTitle, setQuickTitle] = useState("");
   const [banner, setBanner] = useState(null);
+  const [celebration, setCelebration] = useState(null);
   const ref = useRef();
+  const endAtRef = useRef(null);    // タイマー終了予定時刻（実時間基準）
+  const hiddenAtRef = useRef(null); // 画面が隠れた時刻
 
   const total = (mode === "work" ? settings.work : settings.rest) * 60;
   const progress = 1 - secs / total;
   const earnedFish = fishForMinutes(settings.work);
 
-  // タイマー本体
+  // タイマー本体（終了時刻との差分で計算：バックグラウンドでも狂わない）
   useEffect(() => {
-    if (!running) return;
-    ref.current = setInterval(() => setSecs((s) => s - 1), 1000);
+    if (!running) { endAtRef.current = null; return; }
+    endAtRef.current = Date.now() + secs * 1000;
+    ref.current = setInterval(() => {
+      setSecs(Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000)));
+    }, 250);
     return () => clearInterval(ref.current);
   }, [running]);
 
-  // アプリ切り替えを検知してタイマー停止
+  // 離脱判定：画面スリープや1分以内の離脱は許す。
+  // 1分以上離れて戻ってきたら魚が逃げる（ただし離脱中にタイマー満了していれば獲得扱い）
   useEffect(() => {
-    if (!running) return;
     const onVisibility = () => {
       if (document.hidden) {
+        if (running && mode === "work") hiddenAtRef.current = Date.now();
+        return;
+      }
+      if (!hiddenAtRef.current) return;
+      const awaySec = (Date.now() - hiddenAtRef.current) / 1000;
+      hiddenAtRef.current = null;
+      const finished = endAtRef.current && Date.now() >= endAtRef.current;
+      if (running && mode === "work" && awaySec > 60 && !finished) {
         clearInterval(ref.current);
         setRunning(false);
-        flash("📱 アプリを離れたためタイマーを停止しました", C.red);
+        setSecs(settings.work * 60);
+        update((d) => { d.escapes += 1; return d; });
+        flash("💨 1分以上アプリを離れたため魚が逃げてしまった…", "#FF9B9B");
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [running]);
+  }, [running, mode, settings.work]);
 
   const flash = (text, color) => {
     setBanner({ text, color });
@@ -86,13 +160,14 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     setRunning(false);
     if (mode === "work") {
       const fish = fishForMinutes(settings.work);
+      const newCount = (data.collection[fish.e] || 0) + 1;
       update((d) => {
         d.sessions.push({ date: todayStr(), minutes: settings.work, taskId: taskId || null, fish: fish.e });
         d.collection[fish.e] = (d.collection[fish.e] || 0) + 1;
         return d;
       });
-      flash(`✨ ${fish.e} ${fish.name}を獲得！`, C.yellow);
-      beep();
+      setCelebration({ fish: fish.e, name: fish.name, count: newCount });
+      chime();
       notify(`${fish.e} ${fish.name}を獲得！休憩しましょう`);
       setMode("rest");
       setSecs(settings.rest * 60);
@@ -152,6 +227,10 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
   return (
     <div>
+      {celebration && (
+        <Celebration fish={celebration.fish} name={celebration.name} count={celebration.count} onClose={() => setCelebration(null)} />
+      )}
+
       {/* タスク選択 */}
       <select value={taskId} onChange={(e) => setTaskId(e.target.value)}
         style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, fontSize: 14, color: C.ink, marginBottom: 8 }}>
@@ -229,7 +308,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             style={{ padding: "13px 16px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#fff", cursor: "pointer" }}>リセット</button>
         </div>
         <div style={{ fontSize: 10, color: "#7593A8", marginTop: 8 }}>
-          ※ 作業中にリセット・アプリ切替するとタイマーが止まります
+          ※ 画面スリープはOK。作業中にリセット、または1分以上アプリを離れると魚が逃げます
         </div>
         <button onClick={() => reset(mode === "work" ? "rest" : "work")}
           style={{ marginTop: 6, background: "none", border: "none", color: "#9FD9D8", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
