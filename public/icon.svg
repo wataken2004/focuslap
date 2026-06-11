@@ -1,63 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+
   <!-- 背景：深い紺 -->
-  <rect width="192" height="192" rx="40" fill="#0D2137"/>
+  <rect width="192" height="192" rx="40" fill="#0C1E30"/>
 
-  <!-- 水中の光のゆらぎ（薄い帯） -->
-  <rect x="20" y="0" width="18" height="192" rx="9" fill="#1A4A6A" opacity="0.25"/>
-  <rect x="68" y="0" width="10" height="192" rx="5" fill="#1A4A6A" opacity="0.18"/>
-  <rect x="110" y="0" width="22" height="192" rx="11" fill="#1A4A6A" opacity="0.20"/>
-  <rect x="158" y="0" width="12" height="192" rx="6" fill="#1A4A6A" opacity="0.15"/>
+  <!-- 水中の光のゆらぎ -->
+  <rect x="28"  y="0" width="14" height="192" rx="7"  fill="#1A3D58" opacity="0.22"/>
+  <rect x="76"  y="0" width="8"  height="192" rx="4"  fill="#1A3D58" opacity="0.16"/>
+  <rect x="118" y="0" width="18" height="192" rx="9"  fill="#1A3D58" opacity="0.18"/>
+  <rect x="162" y="0" width="10" height="192" rx="5"  fill="#1A3D58" opacity="0.14"/>
 
-  <!-- 海底の砂 -->
-  <rect x="0" y="162" width="192" height="30" rx="0" fill="#1C3A28" opacity="0.9"/>
-  <ellipse cx="40"  cy="164" rx="22" ry="8" fill="#1A3322" opacity="0.7"/>
-  <ellipse cx="110" cy="166" rx="30" ry="7" fill="#1A3322" opacity="0.6"/>
-  <ellipse cx="168" cy="163" rx="18" ry="7" fill="#1A3322" opacity="0.7"/>
+  <!-- 海底 -->
+  <rect x="0" y="158" width="192" height="34" rx="0" fill="#0F2A1E"/>
+  <ellipse cx="36"  cy="160" rx="28" ry="9"  fill="#0D2419" opacity="0.8"/>
+  <ellipse cx="108" cy="163" rx="36" ry="8"  fill="#0D2419" opacity="0.7"/>
+  <ellipse cx="170" cy="160" rx="22" ry="8"  fill="#0D2419" opacity="0.8"/>
 
-  <!-- 海草（左） -->
-  <rect x="22" y="120" width="8" height="46" rx="4" fill="#1B5E3B" opacity="0.85"/>
-  <rect x="18" y="110" width="8" height="28" rx="4" fill="#1B5E3B" opacity="0.7" transform="rotate(-12,22,120)"/>
-  <rect x="26" y="108" width="8" height="26" rx="4" fill="#1B5E3B" opacity="0.7" transform="rotate(10,30,118)"/>
+  <!-- 海草：三角形の積み木 -->
+  <polygon points="20,158 30,158 25,122" fill="#16502E" opacity="0.85"/>
+  <polygon points="28,158 36,158 32,136" fill="#16502E" opacity="0.70"/>
+  <polygon points="14,158 22,158 18,142" fill="#1A6038" opacity="0.60"/>
 
-  <!-- 海草（右） -->
-  <rect x="162" y="124" width="8" height="42" rx="4" fill="#1B5E3B" opacity="0.85"/>
-  <rect x="158" y="114" width="8" height="26" rx="4" fill="#1B5E3B" opacity="0.7" transform="rotate(-10,162,124)"/>
+  <polygon points="162,158 172,158 167,118" fill="#16502E" opacity="0.85"/>
+  <polygon points="154,158 162,158 158,138" fill="#16502E" opacity="0.70"/>
+  <polygon points="170,158 178,158 174,140" fill="#1A6038" opacity="0.60"/>
 
-  <!-- サンゴ -->
-  <rect x="76" y="150" width="10" height="18" rx="5" fill="#2D6B4A" opacity="0.8"/>
-  <rect x="70" y="142" width="8"  height="14" rx="4" fill="#2D6B4A" opacity="0.7"/>
-  <rect x="84" y="144" width="8"  height="12" rx="4" fill="#2D6B4A" opacity="0.7"/>
+  <!-- サンゴ：小さい三角 -->
+  <polygon points="84,158 96,158 90,140"  fill="#1E6640" opacity="0.75"/>
+  <polygon points="90,158 100,158 95,146" fill="#1E6640" opacity="0.65"/>
 
-  <!-- 魚の尾びれ（積み木ブロック） -->
-  <rect x="34" y="70" width="20" height="56" rx="10" fill="#1A4D5C"/>
+  <!-- 尾びれ：三角2枚でフォーク -->
+  <polygon points="48,96 48,58 16,36"  fill="#0E3D4A"/>
+  <polygon points="48,96 48,134 16,156" fill="#0E3D4A"/>
 
-  <!-- 魚の胴体（積み木ブロック・メイン） -->
-  <rect x="50" y="76" width="84" height="44" rx="14" fill="#1E6B72"/>
+  <!-- 魚の胴体：大きな三角形（主） -->
+  <polygon points="155,96 48,56 48,136" fill="#175E6A"/>
 
-  <!-- 背びれ -->
-  <rect x="68" y="58" width="40" height="22" rx="10" fill="#174A54"/>
+  <!-- 胴体上面ハイライト（立体感） -->
+  <polygon points="155,96 48,56 101,96" fill="#1F7280" opacity="0.75"/>
 
-  <!-- 腹びれ -->
-  <rect x="72" y="116" width="28" height="14" rx="7" fill="#174A54"/>
+  <!-- 胴体下面シャドウ（立体感） -->
+  <polygon points="155,96 48,136 101,96" fill="#0E3D4A" opacity="0.40"/>
 
-  <!-- 鱗ライン（縦の切れ目） -->
-  <rect x="72"  y="86" width="5" height="24" rx="3" fill="#174A54" opacity="0.55"/>
-  <rect x="86"  y="86" width="5" height="24" rx="3" fill="#174A54" opacity="0.55"/>
-  <rect x="100" y="86" width="5" height="24" rx="3" fill="#174A54" opacity="0.55"/>
-  <rect x="114" y="86" width="5" height="24" rx="3" fill="#174A54" opacity="0.55"/>
+  <!-- 内側のファセット（鱗っぽい三角の切れ目） -->
+  <polygon points="101,96 101,68 128,96"  fill="#1F7280" opacity="0.30"/>
+  <polygon points="101,96 101,124 128,96" fill="#0E3D4A" opacity="0.25"/>
 
-  <!-- 目（積み木風：白い正方形＋黒い正方形） -->
-  <rect x="118" y="88" width="14" height="14" rx="4" fill="#DDEEE8"/>
-  <rect x="121" y="91" width="7"  height="7"  rx="2" fill="#0D2137"/>
-  <!-- 目のハイライト -->
-  <rect x="125" y="91" width="3"  height="3"  rx="1" fill="#DDEEE8" opacity="0.8"/>
+  <!-- 背びれ：三角 -->
+  <polygon points="70,56 106,56 88,36" fill="#0E3D4A"/>
 
-  <!-- 口 -->
-  <rect x="132" y="107" width="10" height="5" rx="3" fill="#174A54"/>
+  <!-- 腹びれ：小さい三角 -->
+  <polygon points="74,136 96,136 85,152" fill="#0E3D4A"/>
 
-  <!-- 泡（小さい白い丸） -->
-  <circle cx="152" cy="48" r="6" fill="#DDEEE8" opacity="0.25"/>
-  <circle cx="164" cy="30" r="4" fill="#DDEEE8" opacity="0.18"/>
-  <circle cx="144" cy="32" r="3" fill="#DDEEE8" opacity="0.15"/>
-  <circle cx="158" cy="68" r="3" fill="#DDEEE8" opacity="0.20"/>
+  <!-- 泡 -->
+  <circle cx="148" cy="52" r="5" fill="#CDEAEA" opacity="0.20"/>
+  <circle cx="160" cy="34" r="3" fill="#CDEAEA" opacity="0.14"/>
+  <circle cx="140" cy="34" r="2" fill="#CDEAEA" opacity="0.12"/>
+  <circle cx="152" cy="70" r="3" fill="#CDEAEA" opacity="0.16"/>
+
 </svg>
