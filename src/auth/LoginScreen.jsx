@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth, googleProvider, isFirebaseConfigured } from "../firebase.js";
 import { C } from "../shared.jsx";
 
-export function LoginScreen({ onGuestLogin }) {
+export function LoginScreen({ onGuestLogin, onGoogleToken }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -11,7 +11,9 @@ export function LoginScreen({ onGuestLogin }) {
     setLoading(true);
     setError("");
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) onGoogleToken?.(credential.accessToken);
     } catch (e) {
       setError("ログインに失敗しました。もう一度お試しください。");
       setLoading(false);

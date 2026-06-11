@@ -220,20 +220,36 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         </div>
       </div>
 
-      {/* タイマー設定 */}
-      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}`, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: C.sub, fontWeight: 700 }}>タイマー設定</span>
-        <label style={{ fontSize: 13 }}>作業
-          <input type="number" min="5" max="120" value={data.settings.work}
-            onChange={(e) => update((d) => { d.settings.work = +e.target.value || 25; return d; })}
-            style={numInput} />分
-        </label>
-        <label style={{ fontSize: 13 }}>休憩
+      {/* タイマー設定：魚カードで時間を選択 */}
+      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 700, marginBottom: 10 }}>
+          集中時間を選ぶ（魚をタップ）
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6, marginBottom: 12 }}>
+          {FISHES.map((f) => {
+            const selected = data.settings.work === f.minutes;
+            return (
+              <button key={f.e}
+                onClick={() => { update((d) => { d.settings.work = f.minutes; return d; }); reset("work"); }}
+                style={{
+                  padding: "8px 4px", borderRadius: 12, cursor: "pointer", textAlign: "center",
+                  border: `2px solid ${selected ? C.aqua : C.line}`,
+                  background: selected ? "#E6F5F5" : "#fff",
+                }}>
+                <div style={{ fontSize: 22 }}>{f.e}</div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: selected ? C.deepAqua : C.ink, marginTop: 2 }}>{f.name}</div>
+                <div style={{ fontSize: 10, color: C.sub }}>{f.minutes}分</div>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 12, color: C.sub }}>休憩</span>
           <input type="number" min="1" max="30" value={data.settings.rest}
-            onChange={(e) => update((d) => { d.settings.rest = +e.target.value || 5; return d; })}
-            style={numInput} />分
-        </label>
-        <div style={{ fontSize: 11, color: C.sub }}>→ {earnedFish.e} {earnedFish.name}が獲得できます</div>
+            onChange={(e) => { const v = Math.min(30, Math.max(1, parseInt(e.target.value) || 5)); update((d) => { d.settings.rest = v; return d; }); }}
+            style={{ width: 56, padding: "6px 8px", borderRadius: 8, border: `1px solid ${C.line}`, textAlign: "center", fontSize: 14 }} />
+          <span style={{ fontSize: 12, color: C.sub }}>分</span>
+        </div>
       </div>
     </div>
   );
