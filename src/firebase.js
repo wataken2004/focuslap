@@ -20,8 +20,7 @@ if (isFirebaseConfigured) {
   auth = getAuth(app);
   db = getFirestore(app);
   googleProvider = new GoogleAuthProvider();
-  // Googleカレンダー読み書き権限
-  googleProvider.addScope("https://www.googleapis.com/auth/calendar.events");
+  // カレンダースコープはログイン時には要求しない（CalendarTabで個別に要求）
 }
 
 export { auth, db, googleProvider };
