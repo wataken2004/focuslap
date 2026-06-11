@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat } from "../shared.jsx";
+import { FishSVG } from "../fish.jsx";
 
 // 完了通知（許可済みのときだけ）
 const notify = (msg) => {
@@ -71,7 +72,9 @@ function Celebration({ fish, name, count, onClose }) {
       <div style={{ textAlign: "center", animation: "celebPop .55s cubic-bezier(.2,1.4,.4,1) both" }}>
         <div style={{ position: "relative", display: "inline-block" }}>
           <div style={{ position: "absolute", inset: -18, borderRadius: 999, border: "3px solid #F5BE3D", animation: "celebRing 1.2s ease-out .15s infinite" }} />
-          <div style={{ fontSize: 84, animation: "celebBob 2s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(245,190,61,.85))" }}>{fish}</div>
+          <div style={{ animation: "celebBob 2s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(245,190,61,.85))" }}>
+            <FishSVG type={fish} size={130} />
+          </div>
         </div>
         <div style={{ marginTop: 16, fontSize: 12, letterSpacing: ".3em", color: "#F5BE3D", fontWeight: 800 }}>NEW CATCH!</div>
         <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", marginTop: 4 }}>{name}を獲得！</div>
@@ -136,14 +139,6 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     setBanner({ text, color });
     setTimeout(() => setBanner(null), 4000);
   };
-
-  // 集中中は画面スリープを防止（スマホ対応）
-  useEffect(() => {
-    if (!running) return;
-    let lock;
-    navigator.wakeLock?.request("screen").then((l) => { lock = l; }).catch(() => {});
-    return () => { lock?.release?.().catch(() => {}); };
-  }, [running]);
 
   // タブタイトルに残り時間を表示
   useEffect(() => {
@@ -279,13 +274,15 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
           {task ? (
             <div style={{
-              position: "absolute", top: 22,
+              position: "absolute", top: 28,
               left: running || progress > 0 ? `calc(${(progress * 80).toFixed(1)}% + 4%)` : "40%",
-              fontSize: Math.max(stage.size, 20),
               transition: "left 1s linear",
-              animation: "bob 2.4s ease-in-out infinite",
               filter: banner?.color === C.yellow ? "drop-shadow(0 0 8px #F5BE3D)" : "none",
-            }}>{earnedFish.e}</div>
+            }}>
+              <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
+                <FishSVG type={earnedFish.e} size={Math.max(stage.size, 24) * 1.6} style={{ transform: "scaleX(-1)" }} />
+              </div>
+            </div>
           ) : (
             <div style={{ position: "absolute", top: 36, left: 0, right: 0, fontSize: 11, color: "#9FD9D8" }}>タスクを選ぶと魚が現れます</div>
           )}
@@ -369,7 +366,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
                   border: `2px solid ${selected ? C.aqua : C.line}`,
                   background: selected ? "#E6F5F5" : "#fff",
                 }}>
-                <div style={{ fontSize: 22 }}>{f.e}</div>
+                <div style={{ display: "flex", justifyContent: "center" }}><FishSVG type={f.e} size={38} /></div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: selected ? C.deepAqua : C.ink, marginTop: 2 }}>{f.name}</div>
                 <div style={{ fontSize: 10, color: C.sub }}>{f.minutes}分</div>
               </button>

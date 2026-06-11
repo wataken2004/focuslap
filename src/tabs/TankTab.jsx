@@ -1,5 +1,35 @@
 import { useMemo, useState } from "react";
 import { C, FISHES, Stat, todayStr } from "../shared.jsx";
+import { FishSVG } from "../fish.jsx";
+
+/* ---- 魚スポットライト（タップした魚が大きく泳ぐ） ---- */
+function FishSpotlight({ fish, count, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(6,18,32,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, cursor: "pointer" }}>
+      <style>{`@keyframes spotSwim { 0%{left:-28%;transform:scaleX(-1)} 49%{left:74%;transform:scaleX(-1)} 50%{left:74%;transform:scaleX(1)} 99%{left:-28%;transform:scaleX(1)} 100%{left:-28%;transform:scaleX(-1)} }`}</style>
+      <div style={{ width: "min(92vw, 420px)", borderRadius: 20, overflow: "hidden", background: "#0B2C4C", border: "1px solid rgba(255,255,255,0.15)" }}>
+        <div style={{ position: "relative", height: 190, background: "linear-gradient(180deg,#1B6FA8 0%,#11497A 60%,#0B2C4C 100%)", overflow: "hidden" }}>
+          {[16, 42, 68, 88].map((x, i) => (
+            <div key={i} style={{ position: "absolute", left: `${x}%`, bottom: 0, width: 5 + (i % 2) * 3, height: 5 + (i % 2) * 3, borderRadius: 999, background: "rgba(255,255,255,0.3)", animation: `bubble ${3 + i}s linear infinite`, animationDelay: `${i * 0.8}s` }} />
+          ))}
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 16, background: "#C9B07A" }} />
+          <div style={{ position: "absolute", bottom: 10, left: 14, fontSize: 20 }}>🪸</div>
+          <div style={{ position: "absolute", bottom: 10, right: 16, fontSize: 18 }}>🌿</div>
+          <div style={{ position: "absolute", top: 48, left: "-28%", animation: "spotSwim 9s ease-in-out infinite" }}>
+            <div style={{ animation: "bob 2.2s ease-in-out infinite" }}>
+              <FishSVG type={fish.e} size={120} />
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: "14px 16px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fish.name}</div>
+          <div style={{ fontSize: 12, color: "#9FD9D8", marginTop: 4 }}>{fish.minutes}分以上の集中で獲得 ・ 所持 {count}匹</div>
+          <div style={{ fontSize: 11, color: "#7593A8", marginTop: 10 }}>タップで閉じる</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ---- メモ入力コンポーネント ---- */
 function MemoField({ id, memos, update }) {
@@ -46,6 +76,7 @@ function MemoField({ id, memos, update }) {
 /* ---- メインコンポーネント ---- */
 export function TankTab({ data, update }) {
   const [reviewTab, setReviewTab] = useState("goals"); // "goals" | "tasks"
+  const [spotlight, setSpotlight] = useState(null);    // タップされた魚
 
   const raw = data.collection ?? {};
   const col = typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -77,6 +108,10 @@ export function TankTab({ data, update }) {
 
   return (
     <div>
+      {spotlight && (
+        <FishSpotlight fish={spotlight} count={col[spotlight.e] || 0} onClose={() => setSpotlight(null)} />
+      )}
+
       {/* 水槽 */}
       <div style={{
         position: "relative", height: 240, borderRadius: 20,
@@ -102,14 +137,18 @@ export function TankTab({ data, update }) {
           </div>
         )}
         {swimmingFish.map((f) => (
-          <div key={`${f.e}-${f.idx}`} style={{
-            position: "absolute",
-            top: `${12 + (f.idx * 47) % 160}px`,
-            left: `${(f.idx * 29) % 72 + 4}%`,
-            fontSize: 24,
-            animation: `drift ${7 + (f.idx % 4) * 2}s ease-in-out infinite, bob ${2 + (f.idx % 3)}s ease-in-out infinite`,
-            animationDelay: `${f.idx * 0.5}s`,
-          }} title={f.name}>{f.e}</div>
+          <div key={`${f.e}-${f.idx}`}
+            onClick={() => setSpotlight(f)}
+            style={{
+              position: "absolute",
+              top: `${12 + (f.idx * 47) % 160}px`,
+              left: `${(f.idx * 29) % 72 + 4}%`,
+              animation: `drift ${7 + (f.idx % 4) * 2}s ease-in-out infinite, bob ${2 + (f.idx % 3)}s ease-in-out infinite`,
+              animationDelay: `${f.idx * 0.5}s`,
+              cursor: "pointer",
+            }} title={f.name}>
+            <FishSVG type={f.e} size={38} />
+          </div>
         ))}
       </div>
 
@@ -129,13 +168,16 @@ export function TankTab({ data, update }) {
           {FISHES.map((f) => {
             const count = col[f.e] || 0;
             return (
-              <div key={f.e} style={{
-                textAlign: "center", padding: "8px 4px", borderRadius: 12,
-                background: count > 0 ? "#FFF7E0" : "#F0F5F5",
-                border: `1px solid ${count > 0 ? C.yellow : C.line}`,
-              }}>
-                <div style={{ fontSize: 22, filter: count > 0 ? "none" : "grayscale(1) brightness(0.4)", opacity: count > 0 ? 1 : 0.4 }}>
-                  {count > 0 ? f.e : "❓"}
+              <div key={f.e}
+                onClick={() => count > 0 && setSpotlight(f)}
+                style={{
+                  textAlign: "center", padding: "8px 4px", borderRadius: 12,
+                  background: count > 0 ? "#FFF7E0" : "#F0F5F5",
+                  border: `1px solid ${count > 0 ? C.yellow : C.line}`,
+                  cursor: count > 0 ? "pointer" : "default",
+                }}>
+                <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {count > 0 ? <FishSVG type={f.e} size={38} /> : <span style={{ fontSize: 20, opacity: 0.4 }}>❓</span>}
                 </div>
                 <div style={{ fontSize: 10, color: count > 0 ? C.ink : C.sub, fontWeight: count > 0 ? 800 : 500 }}>
                   {count > 0 ? f.name : "???"}

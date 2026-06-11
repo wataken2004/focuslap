@@ -73,6 +73,13 @@ export default function FocusLapApp() {
     return unsub;
   }, []);
 
+  // 画面が隠れている間は全アニメーションを停止（バッテリー節約）
+  useEffect(() => {
+    const onVis = () => document.documentElement.classList.toggle("app-paused", document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
   // ユーザーが決まったらデータをロード
   useEffect(() => {
     if (user === undefined) return;
@@ -160,7 +167,8 @@ export default function FocusLapApp() {
       <style>{`
         @keyframes bob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-120px);opacity:0} }
-        @keyframes drift  { 0%,100%{transform:translateX(0) scaleX(1)} 48%{transform:translateX(26px) scaleX(1)} 50%{transform:translateX(26px) scaleX(-1)} 98%{transform:translateX(0) scaleX(-1)} }
+        @keyframes drift  { 0%,100%{transform:translateX(0) scaleX(-1)} 48%{transform:translateX(26px) scaleX(-1)} 50%{transform:translateX(26px) scaleX(1)} 98%{transform:translateX(0) scaleX(1)} }
+        .app-paused * { animation-play-state: paused !important; }
         button { transition: transform .08s ease, filter .15s ease; }
         button:active { transform: scale(.96); }
         button:hover { filter: brightness(1.05); }
