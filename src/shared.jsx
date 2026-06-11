@@ -143,7 +143,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
         <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
           style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>⏱</button>
       )}
-      <button onClick={() => update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; })}
+      <button onClick={() => { if (window.confirm(`「${t.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; }); }}
         style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16 }}>×</button>
     </div>
   );

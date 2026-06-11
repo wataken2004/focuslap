@@ -82,7 +82,7 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: b.fg, background: b.bg, padding: "4px 10px", borderRadius: 999, flexShrink: 0 }}>{b.label}</span>
               <div style={{ fontSize: 16, fontWeight: 800, flex: 1, minWidth: 0 }}>{g.title}</div>
-              <button onClick={() => update((d) => { d.goals = d.goals.filter((x) => x.id !== g.id); d.tasks.forEach((t) => { if (t.goalId === g.id) t.goalId = null; }); return d; })}
+              <button onClick={() => { if (window.confirm(`「${g.title}」を削除しますか？\n（紐づいたタスクは残ります）`)) update((d) => { d.goals = d.goals.filter((x) => x.id !== g.id); d.tasks.forEach((t) => { if (t.goalId === g.id) t.goalId = null; }); return d; }); }}
                 style={{ border: "none", background: "none", color: C.sub, cursor: "pointer" }}>×</button>
             </div>
 

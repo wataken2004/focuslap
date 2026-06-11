@@ -1,5 +1,28 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, numInput, Stat } from "../shared.jsx";
+import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat } from "../shared.jsx";
+
+// 完了通知（許可済みのときだけ）
+const notify = (msg) => {
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("FocusLap", { body: msg, icon: "./icon.svg" });
+    }
+  } catch { /* 非対応ブラウザは無視 */ }
+};
+
+// 完了音（短いビープ）
+const beep = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    o.start(); o.stop(ctx.currentTime + 0.6);
+  } catch { /* 非対応ブラウザは無視 */ }
+};
 
 export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const { settings } = data;
@@ -40,6 +63,22 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     setTimeout(() => setBanner(null), 4000);
   };
 
+  // 集中中は画面スリープを防止（スマホ対応）
+  useEffect(() => {
+    if (!running) return;
+    let lock;
+    navigator.wakeLock?.request("screen").then((l) => { lock = l; }).catch(() => {});
+    return () => { lock?.release?.().catch(() => {}); };
+  }, [running]);
+
+  // タブタイトルに残り時間を表示
+  useEffect(() => {
+    document.title = running
+      ? `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")} ${mode === "work" ? "⏱" : "☕"} FocusLap`
+      : "FocusLap";
+    return () => { document.title = "FocusLap"; };
+  }, [secs, running, mode]);
+
   // タイマーが0になったとき
   useEffect(() => {
     if (secs > 0) return;
@@ -53,9 +92,13 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         return d;
       });
       flash(`✨ ${fish.e} ${fish.name}を獲得！`, C.yellow);
+      beep();
+      notify(`${fish.e} ${fish.name}を獲得！休憩しましょう`);
       setMode("rest");
       setSecs(settings.rest * 60);
     } else {
+      beep();
+      notify("休憩終了！次のセッションを始めましょう");
       setMode("work");
       setSecs(settings.work * 60);
     }
@@ -133,6 +176,11 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         </div>
         <div style={{ fontSize: 58, fontWeight: 800, fontVariantNumeric: "tabular-nums", margin: "4px 0 8px" }}>{mm}:{ss}</div>
 
+        {/* 進行バー */}
+        <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "0 8px 12px" }}>
+          <div style={{ width: `${(progress * 100).toFixed(1)}%`, height: "100%", borderRadius: 3, background: mode === "work" ? "linear-gradient(90deg,#14A3A1,#7FD6D4)" : C.yellow, transition: "width 1s linear" }} />
+        </div>
+
         {/* 今回獲得できる魚のプレビュー */}
         {mode === "work" && (
           <div style={{ fontSize: 12, color: "#9FD9D8", marginBottom: 12 }}>
@@ -168,7 +216,12 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
         {/* コントロール */}
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-          <button onClick={() => setRunning((r) => !r)}
+          <button onClick={() => {
+            if (!running && "Notification" in window && Notification.permission === "default") {
+              Notification.requestPermission().catch(() => {});
+            }
+            setRunning((r) => !r);
+          }}
             style={{ flex: 1, maxWidth: 180, padding: "13px 0", borderRadius: 14, border: "none", background: running ? C.yellow : C.aqua, color: C.ink, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
             {running ? "一時停止" : secs < total ? "再開" : "スタート"}
           </button>

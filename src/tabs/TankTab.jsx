@@ -47,8 +47,8 @@ function MemoField({ id, memos, update }) {
 export function TankTab({ data, update }) {
   const [reviewTab, setReviewTab] = useState("goals"); // "goals" | "tasks"
 
-  const collection = data.memos !== undefined ? (data.collection ?? {}) : (data.collection ?? {});
-  const col = typeof collection === "object" && !Array.isArray(collection) ? collection : {};
+  const raw = data.collection ?? {};
+  const col = typeof raw === "object" && !Array.isArray(raw) ? raw : {};
 
   const totalFish = Object.values(col).reduce((a, b) => a + b, 0);
   const totalSessions = data.sessions.length;

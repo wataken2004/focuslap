@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "PowerShell(git commit *)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

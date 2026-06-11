@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { onAuthStateChanged, signOut, GoogleAuthProvider } from "firebase/auth";
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "./firebase.js";
 import { loadUserData, saveUserData } from "./storage.js";
 import { C, todayStr } from "./shared.jsx";
@@ -63,7 +63,6 @@ export default function FocusLapApp() {
       setUser(u);
       // Google のアクセストークンを取得してカレンダー連携に使う
       if (u) {
-        const credential = GoogleAuthProvider.credentialFromResult;
         // アクセストークンはログイン時のみ取れるため sessionStorage にキャッシュ
         const cached = sessionStorage.getItem("focuslap:gat");
         if (cached) setGoogleAccessToken(cached);
@@ -135,8 +134,6 @@ export default function FocusLapApp() {
   // カレンダー同期用にGoogleカレンダーのスコープを追加で要求
   const requestCalendarAccess = async () => {
     try {
-      const { signInWithPopup, GoogleAuthProvider } = await import("firebase/auth");
-      const { auth } = await import("./firebase.js");
       const provider = new GoogleAuthProvider();
       provider.addScope("https://www.googleapis.com/auth/calendar.events");
       const result = await signInWithPopup(auth, provider);
@@ -164,6 +161,9 @@ export default function FocusLapApp() {
         @keyframes bob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-120px);opacity:0} }
         @keyframes drift  { 0%,100%{transform:translateX(0) scaleX(1)} 48%{transform:translateX(26px) scaleX(1)} 50%{transform:translateX(26px) scaleX(-1)} 98%{transform:translateX(0) scaleX(-1)} }
+        button { transition: transform .08s ease, filter .15s ease; }
+        button:active { transform: scale(.96); }
+        button:hover { filter: brightness(1.05); }
         @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
       `}</style>
 
