@@ -179,7 +179,8 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     }
   }, [secs]);
 
-  const reset = (m = mode) => {
+  // workMin: 設定更新の反映を待たずに新しい作業時間を直接指定できる
+  const reset = (m = mode, workMin = settings.work) => {
     if (mode === "work" && secs < total && secs > 0 && running) {
       update((d) => { d.escapes += 1; return d; });
       flash("💨 集中を中断…魚が逃げてしまった", C.red);
@@ -187,7 +188,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     clearInterval(ref.current);
     setRunning(false);
     setMode(m);
-    setSecs((m === "work" ? settings.work : settings.rest) * 60);
+    setSecs((m === "work" ? workMin : settings.rest) * 60);
   };
 
   const quickAdd = () => {
@@ -362,7 +363,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             const selected = data.settings.work === f.minutes;
             return (
               <button key={f.e}
-                onClick={() => { update((d) => { d.settings.work = f.minutes; return d; }); reset("work"); }}
+                onClick={() => { update((d) => { d.settings.work = f.minutes; return d; }); reset("work", f.minutes); }}
                 style={{
                   padding: "8px 4px", borderRadius: 12, cursor: "pointer", textAlign: "center",
                   border: `2px solid ${selected ? C.aqua : C.line}`,
