@@ -93,6 +93,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const [quickTitle, setQuickTitle] = useState("");
   const [banner, setBanner] = useState(null);
   const [celebration, setCelebration] = useState(null);
+  const [manualMin, setManualMin] = useState(25);
   const ref = useRef();
   const endAtRef = useRef(null);    // タイマー終了予定時刻（実時間基準）
   const hiddenAtRef = useRef(null); // 画面が隠れた時刻
@@ -123,7 +124,8 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       const awaySec = (Date.now() - hiddenAtRef.current) / 1000;
       hiddenAtRef.current = null;
       const finished = endAtRef.current && Date.now() >= endAtRef.current;
-      if (running && mode === "work" && awaySec > 60 && !finished) {
+      // スマホ学習モード中は他アプリの使用を許可
+      if (running && mode === "work" && awaySec > 60 && !finished && !settings.phoneMode) {
         clearInterval(ref.current);
         setRunning(false);
         setSecs(settings.work * 60);
@@ -133,7 +135,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [running, mode, settings.work]);
+  }, [running, mode, settings.work, settings.phoneMode]);
 
   const flash = (text, color) => {
     setBanner({ text, color });
@@ -184,6 +186,21 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     setRunning(false);
     setMode(m);
     setSecs((m === "work" ? workMin : settings.rest) * 60);
+  };
+
+  // アプリ外の勉強時間を手動で記録（魚も獲得）
+  const addManual = () => {
+    const min = Math.min(300, Math.max(5, parseInt(manualMin) || 0));
+    if (!min) return;
+    const fish = fishForMinutes(min);
+    const newCount = (data.collection[fish.e] || 0) + 1;
+    update((d) => {
+      d.sessions.push({ date: todayStr(), minutes: min, taskId: taskId || null, fish: fish.e, manual: true });
+      d.collection[fish.e] = (d.collection[fish.e] || 0) + 1;
+      return d;
+    });
+    setCelebration({ fish: fish.e, name: fish.name, count: newCount });
+    chime();
   };
 
   const quickAdd = () => {
@@ -306,7 +323,9 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             style={{ padding: "13px 16px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#fff", cursor: "pointer" }}>リセット</button>
         </div>
         <div style={{ fontSize: 10, color: "#7593A8", marginTop: 8 }}>
-          ※ 画面スリープはOK。作業中にリセット、または1分以上アプリを離れると魚が逃げます
+          {settings.phoneMode
+            ? "※ スマホ学習モード中：他のアプリを使ってもOK"
+            : "※ 画面スリープはOK。作業中にリセット、または1分以上アプリを離れると魚が逃げます"}
         </div>
         <button onClick={() => reset(mode === "work" ? "rest" : "work")}
           style={{ marginTop: 6, background: "none", border: "none", color: "#9FD9D8", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
@@ -379,6 +398,44 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             onChange={(e) => { const v = Math.min(30, Math.max(1, parseInt(e.target.value) || 5)); update((d) => { d.settings.rest = v; return d; }); }}
             style={{ width: 56, padding: "6px 8px", borderRadius: 8, border: `1px solid ${C.line}`, textAlign: "center", fontSize: 14 }} />
           <span style={{ fontSize: 12, color: C.sub }}>分</span>
+        </div>
+      </div>
+
+      {/* スマホ学習モード */}
+      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${settings.phoneMode ? C.aqua : C.line}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>📱 スマホ学習モード</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
+              単語アプリ・リスニングなどスマホで勉強するとき用。他のアプリを開いても魚が逃げません。
+            </div>
+          </div>
+          <button
+            onClick={() => update((d) => { d.settings.phoneMode = !d.settings.phoneMode; return d; })}
+            style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: settings.phoneMode ? C.deepAqua : C.line, color: settings.phoneMode ? "#fff" : C.sub, fontWeight: 800, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>
+            {settings.phoneMode ? "ON" : "OFF"}
+          </button>
+        </div>
+      </div>
+
+      {/* アプリ外の勉強をあとから記録 */}
+      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 4 }}>✏️ あとから記録</div>
+        <div style={{ fontSize: 11, color: C.sub, marginBottom: 10 }}>
+          タイマーを使わなかった勉強時間を手動で追加できます。上で選択中のタスクに記録されます。
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <input type="number" min="5" max="300" value={manualMin}
+            onChange={(e) => setManualMin(e.target.value)}
+            style={{ width: 64, padding: "8px", borderRadius: 8, border: `1px solid ${C.line}`, textAlign: "center", fontSize: 14 }} />
+          <span style={{ fontSize: 12, color: C.sub }}>分</span>
+          <span style={{ fontSize: 12, color: C.sub }}>
+            → {fishForMinutes(Math.min(300, Math.max(5, parseInt(manualMin) || 5))).e} {fishForMinutes(Math.min(300, Math.max(5, parseInt(manualMin) || 5))).name}を獲得
+          </span>
+          <button onClick={addManual}
+            style={{ marginLeft: "auto", padding: "9px 18px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+            記録する
+          </button>
         </div>
       </div>
     </div>
