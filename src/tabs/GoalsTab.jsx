@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { C, uid, todayStr, TaskRow } from "../shared.jsx";
+import { C, uid, todayStr, TaskRow, FISHES } from "../shared.jsx";
+
+// 目標に紐づくセッションの集計
+function goalStats(goalId, tasks, sessions) {
+  const taskIds = tasks.filter((t) => t.goalId === goalId).map((t) => t.id);
+  const linked = sessions.filter((s) => taskIds.includes(s.taskId));
+  const totalMin = linked.reduce((a, s) => a + s.minutes, 0);
+  const fishCounts = linked.reduce((acc, s) => {
+    if (s.fish) acc[s.fish] = (acc[s.fish] || 0) + 1;
+    return acc;
+  }, {});
+  return { totalMin, fishCounts, sessionCount: linked.length };
+}
 
 export function GoalsTab({ data, update, growthOf, onFocus }) {
   const [title, setTitle] = useState("");
@@ -62,6 +74,9 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
         const dl = g.date ? daysLeft(g.date) : null;
         const open = openId === g.id;
         const b = badge(g.type);
+        const { totalMin, fishCounts, sessionCount } = goalStats(g.id, data.tasks, data.sessions);
+        const hours = Math.floor(totalMin / 60);
+        const mins = totalMin % 60;
         return (
           <div key={g.id} style={{ background: C.card, border: `1px solid ${open ? C.aqua : C.line}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -82,6 +97,28 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
               <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${C.aqua}, ${C.deepAqua})`, transition: "width .4s" }} />
             </div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>タスク {done}/{linked.length} 完了（{pct}%）</div>
+
+            {/* 集中時間・魚カウント */}
+            {sessionCount > 0 && (
+              <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, background: "#F0FAFA", border: `1px solid ${C.line}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                  <div>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: C.deepAqua, fontVariantNumeric: "tabular-nums" }}>
+                      {hours > 0 ? `${hours}時間` : ""}{mins > 0 ? `${mins}分` : hours === 0 ? `${totalMin}分` : ""}
+                    </span>
+                    <span style={{ fontSize: 11, color: C.sub, marginLeft: 6 }}>/ {sessionCount}セッション</span>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {FISHES.filter((f) => fishCounts[f.e]).map((f) => (
+                    <div key={f.e} style={{ display: "flex", alignItems: "center", gap: 3, background: "#fff", border: `1px solid ${C.line}`, borderRadius: 8, padding: "3px 8px" }}>
+                      <span style={{ fontSize: 16 }}>{f.e}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: C.deepAqua }}>×{fishCounts[f.e]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button onClick={() => { setOpenId(open ? null : g.id); setSubTitle(""); }}
               style={{ width: "100%", marginTop: 10, padding: "9px 0", borderRadius: 10, border: `1px dashed ${C.line}`, background: open ? "#F0FAFA" : "#fff", color: C.deepAqua, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
