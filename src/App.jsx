@@ -27,6 +27,7 @@ const DEFAULT_DATA = {
   settings: { work: 25, rest: 5 },
   collection: {},
   escapes: 0,
+  memos: {},
 };
 
 function migrateData(d) {
@@ -37,6 +38,7 @@ function migrateData(d) {
     d.collection = obj;
   }
   if (!d.collection) d.collection = {};
+  if (!d.memos) d.memos = {};
   if (typeof d.escapes !== "number") d.escapes = 0;
   d.goals.forEach((g) => { if (!g.type) g.type = "goal"; });
   // sessions に fish フィールドがなければスキップ（古いデータ互換）
@@ -172,7 +174,7 @@ export default function FocusLapApp() {
         {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
         {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} googleAccessToken={googleAccessToken} />}
         {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
-        {tab === "tank"  && <TankTab data={data} />}
+        {tab === "tank"  && <TankTab data={data} update={update} />}
       </main>
 
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: C.card, borderTop: `1px solid ${C.line}`, display: "flex" }}>
