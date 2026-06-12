@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, fmt, todayStr, addDays, TaskRow, TaskForm } from "../shared.jsx";
+import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
 
 export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [view, setView] = useState("month");
@@ -157,19 +157,48 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
               <button onClick={() => setAssignTime("")}
                 style={{ padding: "6px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 11, cursor: "pointer" }}>クリア</button>
             )}
-            <button
-              onClick={() => {
-                update((d) => {
-                  const x = d.tasks.find((x) => x.id === assignId);
-                  if (x) { x.due = selected; x.startTime = assignTime || null; }
-                  return d;
-                });
-                setAssignId("");
-                setAssignTime("");
-              }}
-              style={{ marginLeft: "auto", padding: "9px 16px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
-              この日に割り振る
-            </button>
+            <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+              <button
+                onClick={() => {
+                  // 移動：元の日から外してこの日へ
+                  update((d) => {
+                    const x = d.tasks.find((x) => x.id === assignId);
+                    if (x) { x.due = selected; x.startTime = assignTime || null; }
+                    return d;
+                  });
+                  setAssignId("");
+                  setAssignTime("");
+                }}
+                style={{ padding: "9px 14px", borderRadius: 10, border: `1px solid ${C.deepAqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                移動
+              </button>
+              <button
+                onClick={() => {
+                  // コピー：元のタスクは残したまま、この日に同じタスクを追加（時刻は別々に設定可）
+                  update((d) => {
+                    const x = d.tasks.find((x) => x.id === assignId);
+                    if (x) {
+                      d.tasks.unshift({
+                        id: uid(), title: x.title, goalId: x.goalId,
+                        due: selected, startTime: assignTime || null,
+                        note: x.note, done: false,
+                      });
+                    }
+                    return d;
+                  });
+                  setAssignId("");
+                  setAssignTime("");
+                }}
+                style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                ＋ コピーを追加
+              </button>
+            </div>
+          </div>
+        )}
+
+        {assignId && (
+          <div style={{ fontSize: 10, color: C.sub, marginTop: 6 }}>
+            移動＝元の日から外してこの日へ ／ コピー＝元の日にも残したまま、この日にも追加（例：リスニングを15日14時と18日18時の両方に置ける）
           </div>
         )}
       </div>
