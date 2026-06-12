@@ -35,61 +35,10 @@ function FishSpotlight({ fish, count, onClose }) {
   );
 }
 
-/* ---- メモ入力コンポーネント（保存ボタン方式・スマホ対応） ---- */
-function MemoField({ id, memos, update }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const text = memos?.[id] ?? "";
-
-  if (!editing) {
-    return (
-      <button type="button"
-        onClick={() => { setDraft(text); setEditing(true); }}
-        style={{
-          width: "100%", textAlign: "left", marginTop: 8, padding: "9px 10px", borderRadius: 10,
-          border: `1px dashed ${text ? C.aqua : C.line}`,
-          background: text ? "#F0FAFA" : "#fff",
-          color: text ? C.ink : C.sub, fontSize: 13, cursor: "pointer", whiteSpace: "pre-wrap",
-        }}>
-        {text || "✏️ メモを追加…"}
-      </button>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: 8 }}>
-      <textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        autoFocus
-        placeholder="メモを入力…"
-        style={{
-          width: "100%", boxSizing: "border-box", padding: "8px 10px",
-          borderRadius: 10, border: `1px solid ${C.aqua}`, fontSize: 13,
-          resize: "vertical", minHeight: 64, fontFamily: "inherit", background: "#fff",
-        }}
-      />
-      <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-        <button type="button" onClick={() => setEditing(false)}
-          style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-          キャンセル
-        </button>
-        <button type="button"
-          onClick={() => {
-            update((d) => { if (!d.memos) d.memos = {}; d.memos[id] = draft; return d; });
-            setEditing(false);
-          }}
-          style={{ padding: "7px 14px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-          保存
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ---- メインコンポーネント ---- */
 export function TankTab({ data, update }) {
-  const [reviewTab, setReviewTab] = useState("goals"); // "goals" | "tasks"
+  const [editingId, setEditingId] = useState(null); // メモ編集中のタスクID
+  const [draft, setDraft] = useState("");
   const [spotlight, setSpotlight] = useState(null);    // タップされた魚
 
   const raw = data.collection ?? {};
@@ -129,14 +78,8 @@ export function TankTab({ data, update }) {
   }, [col]);
   const ownedKinds = FISHES.filter((f) => (col[f.e] || 0) > 0).length;
 
-  // 振り返りデータ
-  const completedGoals = data.goals.filter((g) => {
-    const linked = data.tasks.filter((t) => t.goalId === g.id);
-    return linked.length > 0 && linked.every((t) => t.done);
-  });
-  const activeGoals = data.goals.filter((g) => !completedGoals.find((c) => c.id === g.id));
+  // 振り返りデータ（完了したタスクのみ）
   const completedTasks = data.tasks.filter((t) => t.done);
-  const allTasks = data.tasks;
 
   const growthOf = (taskId) => data.sessions.filter((s) => s.taskId === taskId).length;
 
@@ -249,137 +192,85 @@ export function TankTab({ data, update }) {
         </div>
       </div>
 
-      {/* ===== 振り返りセクション ===== */}
+      {/* ===== 振り返り（完了したタスクのみ・タップでメモ） ===== */}
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 4 }}>🔍 振り返り・メモ</div>
-        <div style={{ fontSize: 11, color: C.sub, marginBottom: 12 }}>メモは完了したタスク・達成した目標に書けます</div>
-
-        {/* タブ切替 */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-          {[["goals", "目標"], ["tasks", "タスク"]].map(([k, l]) => (
-            <button key={k} onClick={() => setReviewTab(k)}
-              style={{
-                flex: 1, padding: "8px 0", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13,
-                border: `1px solid ${reviewTab === k ? C.deepAqua : C.line}`,
-                background: reviewTab === k ? C.deepAqua : "#fff",
-                color: reviewTab === k ? "#fff" : C.sub,
-              }}>{l}</button>
-          ))}
+        <div style={{ fontSize: 11, color: C.sub, marginBottom: 12 }}>
+          完了したタスクをタップするとメモを書けます（{completedTasks.length}件）
         </div>
 
-        {/* 目標タブ */}
-        {reviewTab === "goals" && (
-          <div>
-            {data.goals.length === 0 && (
-              <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "20px 0" }}>目標がまだありません。</div>
-            )}
+        {completedTasks.length === 0 && (
+          <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "20px 0" }}>
+            完了したタスクはまだありません。<br />タスクを完了するとここで振り返りができます。
+          </div>
+        )}
 
-            {/* 進行中の目標 */}
-            {activeGoals.map((g) => {
-              const linked = allTasks.filter((t) => t.goalId === g.id);
-              const done = linked.filter((t) => t.done).length;
-              const pct = linked.length ? Math.round((done / linked.length) * 100) : 0;
-              return (
-                <div key={g.id} style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: "#F8FAFA", border: `1px solid ${C.line}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: C.deepAqua, background: "#E6F5F5", padding: "2px 8px", borderRadius: 999 }}>進行中</span>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{g.title}</span>
+        {completedTasks.map((t) => {
+          const g = data.goals.find((x) => x.id === t.goalId);
+          const sessions = growthOf(t.id);
+          const lastFish = [...data.sessions].reverse().find((s) => s.taskId === t.id);
+          const memo = data.memos?.[t.id] ?? "";
+          const isEditing = editingId === t.id;
+          return (
+            <div key={t.id}
+              onClick={() => { if (!isEditing) { setDraft(memo); setEditingId(t.id); } }}
+              style={{
+                marginBottom: 10, padding: 12, borderRadius: 12, cursor: isEditing ? "default" : "pointer",
+                background: isEditing ? "#F0FAFA" : "#F8FAFA",
+                border: `1px solid ${isEditing ? C.aqua : memo ? "#BFE3E2" : C.line}`,
+              }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{lastFish?.fish ?? "✅"}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{t.title}</div>
+                  <div style={{ fontSize: 11, color: C.sub }}>
+                    {g && <span style={{ color: C.deepAqua }}>● {g.title}　</span>}
+                    {sessions}回のセッション{t.due && ` · ${t.due}`}
                   </div>
-                  <div style={{ height: 8, borderRadius: 4, background: "#E4EFEF", overflow: "hidden", marginBottom: 4 }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg,${C.aqua},${C.deepAqua})`, transition: "width .4s" }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: C.sub }}>タスク {done}/{linked.length} 完了（{pct}%）</div>
                 </div>
-              );
-            })}
-
-            {/* 完了した目標 */}
-            {completedGoals.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 8 }}>✅ 達成済みの目標</div>
-                {completedGoals.map((g) => {
-                  const linked = allTasks.filter((t) => t.goalId === g.id);
-                  const totalSess = linked.reduce((a, t) => a + growthOf(t.id), 0);
-                  return (
-                    <div key={g.id} style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: "#F0FFF8", border: `1px solid #A8DFC4` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 16 }}>🏆</span>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "#1A6B45" }}>{g.title}</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: C.sub, marginBottom: 6 }}>
-                        タスク {linked.length}件完了・累計 {totalSess} セッション
-                        {g.date && ` · 期日 ${g.date}`}
-                      </div>
-                      <MemoField id={g.id} memos={data.memos} update={update} />
-                    </div>
-                  );
-                })}
+                {!isEditing && (
+                  <span style={{ fontSize: 11, color: C.deepAqua, fontWeight: 700, flexShrink: 0 }}>
+                    {memo ? "✏️ 編集" : "✏️ メモ"}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* タスクタブ */}
-        {reviewTab === "tasks" && (
-          <div>
-            {allTasks.length === 0 && (
-              <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "20px 0" }}>タスクがまだありません。</div>
-            )}
+              {/* 保存済みメモの表示 */}
+              {!isEditing && memo && (
+                <div style={{ marginTop: 8, fontSize: 12, color: C.ink, background: "#fff", borderRadius: 8, padding: "8px 10px", whiteSpace: "pre-wrap", border: `1px dashed ${C.aqua}` }}>
+                  {memo}
+                </div>
+              )}
 
-            {/* 完了タスク */}
-            {completedTasks.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 8 }}>✅ 完了したタスク（{completedTasks.length}件）</div>
-                {completedTasks.map((t) => {
-                  const g = data.goals.find((x) => x.id === t.goalId);
-                  const sessions = growthOf(t.id);
-                  const lastFish = [...data.sessions].reverse().find((s) => s.taskId === t.id);
-                  return (
-                    <div key={t.id} style={{ marginBottom: 10, padding: 12, borderRadius: 12, background: "#F8FAFA", border: `1px solid ${C.line}` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 18 }}>{lastFish?.fish ?? "🥚"}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, textDecoration: "line-through" }}>{t.title}</div>
-                          <div style={{ fontSize: 11, color: C.sub }}>
-                            {g && <span style={{ color: C.deepAqua }}>● {g.title}　</span>}
-                            {sessions}回のセッション{t.due && ` · ${t.due}`}
-                          </div>
-                        </div>
-                      </div>
-                      <MemoField id={t.id} memos={data.memos} update={update} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* 未完了タスク */}
-            {allTasks.filter((t) => !t.done).length > 0 && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 8 }}>⏳ 進行中のタスク</div>
-                {allTasks.filter((t) => !t.done).map((t) => {
-                  const g = data.goals.find((x) => x.id === t.goalId);
-                  const sessions = growthOf(t.id);
-                  const lastFish = [...data.sessions].reverse().find((s) => s.taskId === t.id);
-                  return (
-                    <div key={t.id} style={{ marginBottom: 10, padding: 12, borderRadius: 12, background: "#F8FAFA", border: `1px solid ${C.line}` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 18 }}>{lastFish?.fish ?? "🥚"}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>{t.title}</div>
-                          <div style={{ fontSize: 11, color: C.sub }}>
-                            {g && <span style={{ color: C.deepAqua }}>● {g.title}　</span>}
-                            {sessions}回のセッション{t.due && ` · ${t.due}`}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+              {/* メモ編集 */}
+              {isEditing && (
+                <div style={{ marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    autoFocus
+                    placeholder="振り返りメモを入力…（例：ここが難しかった、次はこうする）"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.aqua}`, fontSize: 13, resize: "vertical", minHeight: 64, fontFamily: "inherit", background: "#fff" }}
+                  />
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+                    <button type="button" onClick={() => setEditingId(null)}
+                      style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      キャンセル
+                    </button>
+                    <button type="button"
+                      onClick={() => {
+                        update((d) => { if (!d.memos) d.memos = {}; d.memos[t.id] = draft; return d; });
+                        setEditingId(null);
+                      }}
+                      style={{ padding: "7px 14px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                      保存
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
