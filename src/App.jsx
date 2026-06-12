@@ -24,38 +24,40 @@ const appNotify = (msg) => {
 /* ---- タブごとの使い方説明 ---- */
 const HELP = {
   focus: [
-    "魚カードをタップして集中時間を選び、スタート。長い時間ほどレアな魚が獲れます",
-    "1分以上アプリを離れると魚が逃げます（📱スマホ学習モードON中は逃げません）",
-    "🔁繰り返しモードONで、休憩が終わると自動で次の集中が始まります",
-    "タイマーを使わなかった勉強は「✏️あとから記録」で追加できます",
+    "下の魚カードで集中時間を選んでスタート。時間が長いほどレアな魚が獲れます（未獲得の魚はシルエットで、獲るまでのお楽しみ）",
+    "画面スリープはOK。ただし1分以上アプリを離れると魚が逃げます。スマホで勉強するときは📱スマホ学習モードをONに",
+    "🔁繰り返しモードONなら、休憩が終わると自動で次の集中が始まります",
+    "タイマーなしで勉強した分は「✏️あとから記録」で追加すれば、ちゃんと魚がもらえます",
+    "📲プッシュ通知が有効なら、アプリを閉じていても集中終了をお知らせします",
   ],
   tasks: [
-    "フォームからタスクを追加。期限・開始時刻・目標との紐付けは任意です",
-    "開始時刻を設定すると、5分前に通知が届きます（通知許可が必要）",
-    "🔔をONにすると、未完了タスクがある間1時間ごとにお知らせします",
-    "各タスクの⏱ボタンで、すぐにそのタスクの集中を始められます",
+    "①タスク名だけで追加OK。期限・開始時刻・目標との紐付けは任意です",
+    "開始時刻を設定すると、その5分前に通知が届きます",
+    "🔔忘れ防止リマインドONで、未完了タスクがある間1時間ごとにお知らせ（8〜22時）",
+    "📲プッシュ通知を有効にすると、アプリを閉じていても通知が届きます",
+    "各タスクの⏱ボタンでそのタスクの集中をすぐ開始。×は確認してから削除されます",
   ],
   cal: [
-    "月・週・日でビューを切り替え、日付をタップするとその日のタスクが見えます",
-    "「＋この日に追加」で新規タスク、「既存タスクを割り振る」で期限の変更ができます",
-    "Googleカレンダー同期をONにすると予定が表示され、タスク化もできます",
+    "月・週・日を切り替えて、日付をタップするとその日のタスクと予定が見えます",
+    "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクの期限をその日に変更できます",
+    "Googleカレンダー同期をONにすると予定が表示され、「＋タスクに追加」でそのままタスク化できます",
   ],
   goals: [
-    "🎯目標 / 💼仕事を追加し、タスクを紐付けて進捗を管理します",
-    "目標ごとに合計集中時間と獲得した魚が表示されます",
-    "残り日数は期限が近づくと赤くなります",
+    "🎯目標 / 💼仕事を追加し、タスクを紐付けて進捗バーで管理します",
+    "目標ごとに合計集中時間・セッション数・獲得した魚の内訳が見えます",
+    "期限まで30日を切ると残り日数が赤く表示されます",
   ],
   tank: [
-    "泳いでいる魚や図鑑をタップすると、大きく観察できます",
-    "図鑑は長い時間集中するほどレアな魚で埋まっていきます",
-    "完了したタスク・達成した目標に振り返りメモを残せます",
+    "泳いでいる魚や図鑑のマスをタップすると、大きく泳ぐ姿を観察できます",
+    "図鑑は獲得した魚ほど中央に集まります。未獲得はシルエット＋必要時間のヒント付き",
+    "振り返り：完了したタスクのカードをタップすると、メモを書いて記録できます",
   ],
 };
 
 function HelpSheet({ tab, title, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "75vh", overflowY: "auto" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 12 }}>💡「{title}」タブの使い方</div>
         {HELP[tab].map((h, i) => (
           <div key={i} style={{ display: "flex", gap: 8, marginBottom: 10, fontSize: 13, color: C.ink, lineHeight: 1.6 }}>
@@ -149,7 +151,7 @@ function SettingsSheet({ user, data, update, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "75vh", overflowY: "auto" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 6 }}>⚙️ 設定</div>
 
         {/* アカウント */}
