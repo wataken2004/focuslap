@@ -1,6 +1,6 @@
 // アプリを閉じていても届くプッシュ通知の購読処理（Web Push）
 import { isFirebaseConfigured, db } from "./firebase.js";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -40,5 +40,25 @@ export async function enablePush(uid) {
   } catch (e) {
     console.error("push subscribe failed", e);
     return { ok: false, reason: "error" };
+  }
+}
+
+/** プッシュ通知を無効化して購読情報をFirestoreから削除する */
+export async function disablePush(uid) {
+  try {
+    if (!("serviceWorker" in navigator)) return { ok: true };
+    const reg = await navigator.serviceWorker.register("./sw.js");
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      const key = sub.endpoint.replace(/[^a-zA-Z0-9]/g, "").slice(-48);
+      await sub.unsubscribe();
+      if (uid && isFirebaseConfigured) {
+        await deleteDoc(doc(db, "users", uid, "push", key)).catch(() => {});
+      }
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("push unsubscribe failed", e);
+    return { ok: false };
   }
 }

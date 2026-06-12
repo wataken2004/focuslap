@@ -10,6 +10,7 @@ import { GoalsTab } from "./tabs/GoalsTab.jsx";
 import { TankTab } from "./tabs/TankTab.jsx";
 import { LoginScreen } from "./auth/LoginScreen.jsx";
 import { IconFocus, IconTasks, IconCal, IconGoals, IconTank } from "./icons.jsx";
+import { enablePush, disablePush } from "./push.js";
 
 // アプリ内通知（許可済みのときだけ）
 const appNotify = (msg) => {
@@ -109,6 +110,96 @@ function migrateData(d) {
   return d;
 }
 
+/* ---- 設定シート（通知・アカウント） ---- */
+function SettingsSheet({ user, data, update, onClose }) {
+  const [pushOn, setPushOn] = useState(localStorage.getItem("focuslap:pushOn") === "1");
+  const [busy, setBusy] = useState(false);
+
+  const togglePush = async () => {
+    setBusy(true);
+    if (pushOn) {
+      await disablePush(user?.uid);
+      localStorage.setItem("focuslap:pushOn", "0");
+      setPushOn(false);
+    } else {
+      const r = await enablePush(user?.uid);
+      if (r.ok) {
+        localStorage.setItem("focuslap:pushOn", "1");
+        setPushOn(true);
+      } else {
+        const msgs = {
+          login: "プッシュ通知にはGoogleログインが必要です。",
+          denied: "通知がブロックされています。ブラウザの設定から許可してください。",
+          unsupported: "この環境ではプッシュ通知を利用できません。iPhoneの場合は、ホーム画面に追加したアプリから有効にしてください。",
+          error: "登録に失敗しました。時間をおいて再度お試しください。",
+        };
+        alert(msgs[r.reason] || msgs.error);
+      }
+    }
+    setBusy(false);
+  };
+
+  const row = { display: "flex", alignItems: "center", gap: 10, padding: "13px 0", borderBottom: `1px solid ${C.line}` };
+  const toggleBtn = (on, onClick, disabled) => (
+    <button onClick={onClick} disabled={disabled}
+      style={{ padding: "7px 16px", borderRadius: 999, border: "none", background: on ? C.deepAqua : C.line, color: on ? "#fff" : C.sub, fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+      {disabled ? "…" : on ? "ON" : "OFF"}
+    </button>
+  );
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 6 }}>⚙️ 設定</div>
+
+        {/* アカウント */}
+        <div style={row}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>アカウント</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>{user ? (user.displayName || user.email) : "ゲストモード（このブラウザのみ保存）"}</div>
+          </div>
+          {user && (
+            <button onClick={() => { signOut(auth); onClose(); }}
+              style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+              ログアウト
+            </button>
+          )}
+        </div>
+
+        {/* プッシュ通知 */}
+        <div style={row}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>📲 プッシュ通知</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>
+              {user ? "アプリを閉じていても開始時刻・リマインドが届きます" : "Googleログインすると利用できます"}
+            </div>
+          </div>
+          {user && toggleBtn(pushOn, togglePush, busy)}
+        </div>
+
+        {/* 1時間ごとリマインド */}
+        <div style={{ ...row, borderBottom: "none" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🔔 忘れ防止リマインド</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>未完了タスクがある間、1時間ごとに通知（8時〜22時）</div>
+          </div>
+          {toggleBtn(data.settings.hourlyReminder, () => {
+            if (!data.settings.hourlyReminder && "Notification" in window && Notification.permission === "default") {
+              Notification.requestPermission().catch(() => {});
+            }
+            update((d) => { d.settings.hourlyReminder = !d.settings.hourlyReminder; return d; });
+          }, false)}
+        </div>
+
+        <button onClick={onClose}
+          style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 12, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          閉じる
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FocusLapApp() {
   const [user, setUser] = useState(undefined);         // undefined = 読み込み中
   const [guestMode, setGuestMode] = useState(false);
@@ -117,6 +208,14 @@ export default function FocusLapApp() {
   const [tab, setTab] = useState("focus");
   const [focusTaskId, setFocusTaskId] = useState("");
   const [help, setHelp] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pushPromptDismissed, setPushPromptDismissed] = useState(
+    () => localStorage.getItem("focuslap:pushPrompted") === "1"
+  );
+  const dismissPushPrompt = () => {
+    localStorage.setItem("focuslap:pushPrompted", "1");
+    setPushPromptDismissed(true);
+  };
 
   // Firebase Auth の状態監視
   useEffect(() => {
@@ -296,20 +395,29 @@ export default function FocusLapApp() {
               style={{ width: 22, height: 22, borderRadius: 999, border: "1.5px solid #9FBCC4", color: C.sub, background: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: "19px", padding: 0 }}>?</button>
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-          {user ? (
-            <>
-              <span style={{ fontSize: 11, color: C.sub }}>{user.displayName || user.email}</span>
-              <button onClick={() => signOut(auth)}
-                style={{ fontSize: 11, color: C.sub, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-                ログアウト
-              </button>
-            </>
-          ) : (
-            <span style={{ fontSize: 11, color: C.sub }}>ゲストモード</span>
-          )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, color: C.sub, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {user ? (user.displayName || user.email) : "ゲストモード"}
+          </span>
+          <button onClick={() => setSettingsOpen(true)} title="設定"
+            style={{ width: 32, height: 32, borderRadius: 999, border: `1px solid ${C.line}`, background: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: 15, padding: 0 }}>
+            ⚙️
+          </button>
         </div>
       </header>
+
+      {/* ログイン済みで通知未設定の人への案内（1回だけ表示） */}
+      {user && !pushPromptDismissed && localStorage.getItem("focuslap:pushOn") !== "1" && (
+        <div style={{ margin: "0 16px 10px", padding: "10px 14px", background: "#E6F5F5", border: `1px solid ${C.aqua}`, borderRadius: 12, display: "flex", alignItems: "center", gap: 8, position: "relative", zIndex: 1 }}>
+          <span style={{ fontSize: 12, flex: 1, color: C.ink, fontWeight: 600 }}>📲 アプリを閉じていても通知を受け取れます</span>
+          <button onClick={() => { setSettingsOpen(true); dismissPushPrompt(); }}
+            style={{ padding: "6px 12px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>
+            設定する
+          </button>
+          <button onClick={dismissPushPrompt}
+            style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, padding: 0, flexShrink: 0 }}>×</button>
+        </div>
+      )}
 
       <main style={{ flex: 1, padding: "0 16px 96px", position: "relative", zIndex: 1 }}>
         {tab === "focus" && (
@@ -322,6 +430,7 @@ export default function FocusLapApp() {
       </main>
 
       {help && <HelpSheet tab={tab} title={titles[tab]} onClose={() => setHelp(false)} />}
+      {settingsOpen && <SettingsSheet user={user} data={data} update={update} onClose={() => setSettingsOpen(false)} />}
 
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", zIndex: 10 }}>
         {[["focus", IconFocus, "集中"], ["tasks", IconTasks, "タスク"], ["cal", IconCal, "予定"], ["goals", IconGoals, "目標"], ["tank", IconTank, "水槽"]].map(([k, Icon, label]) => (
