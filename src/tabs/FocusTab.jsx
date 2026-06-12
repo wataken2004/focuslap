@@ -116,7 +116,6 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const [swElapsed, setSwElapsed] = useState(0); // 経過秒
   const [swRunning, setSwRunning] = useState(false);
   const swStartRef = useRef(null);   // 計測開始時刻（一時停止分を調整済み）
-  const swHiddenRef = useRef(null);  // 画面が隠れた時刻
   const timerKind = settings.timerKind === "stopwatch" ? "stopwatch" : "timer";
   const ref = useRef();
   const endAtRef = useRef(null);    // タイマー終了予定時刻（実時間基準）
@@ -186,26 +185,9 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     return () => clearInterval(iv);
   }, [swRunning]);
 
-  // ストップウォッチの離脱処理：魚は逃げないが、1分超の離脱時間はカウントから除外
-  // （スマホ学習モードON中は離脱中もカウント継続）
-  useEffect(() => {
-    const onVis = () => {
-      if (document.hidden) {
-        if (swRunning) swHiddenRef.current = Date.now();
-        return;
-      }
-      if (!swHiddenRef.current) return;
-      const away = Date.now() - swHiddenRef.current;
-      swHiddenRef.current = null;
-      if (swRunning && away > 60000 && !settings.phoneMode) {
-        swStartRef.current += away;
-        setSwElapsed(Math.floor((Date.now() - swStartRef.current) / 1000));
-        flash("🌙 離れていた時間は計測から除外しました", "#9FD9D8");
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [swRunning, settings.phoneMode]);
+  // ストップウォッチは常にスマホ学習モード扱い：
+  // 他のアプリを使っても画面がスリープしても、魚は逃げず計測も止まらない
+  // （タイムスタンプ基準なので離脱中の時間もそのままカウントされる）
 
   const flash = (text, color) => {
     setBanner({ text, color });
@@ -471,7 +453,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             </button>
           </div>
           <div style={{ fontSize: 10, color: "#7593A8", marginTop: 8 }}>
-            ※ 1分以上アプリを離れた時間は自動でカウントから除外されます（📱スマホ学習モードON中は除外なし）
+            ※ 他のアプリを使っても魚は逃げず、計測は続きます。「リセット」で破棄すると魚が逃げます
           </div>
         </div>
       ) : (
