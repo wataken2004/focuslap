@@ -28,6 +28,8 @@ self.addEventListener("push", (e) => {
       body: data.body || "",
       icon: "./icon-192.png",
       badge: "./icon-192.png",
+      silent: false,              // 端末の通知音を鳴らす
+      vibrate: [150, 80, 150],    // Androidはバイブも
     });
   })());
 });

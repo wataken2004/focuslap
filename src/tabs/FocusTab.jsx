@@ -11,36 +11,54 @@ const notify = (msg) => {
   } catch { /* 非対応ブラウザは無視 */ }
 };
 
-// 完了音（短いビープ）
-const beep = () => {
+// ---- サウンド ----
+// iOS/Safariは「ユーザー操作中」にAudioContextを作らないと音が鳴らないため、
+// スタートボタン押下時に ensureAudio() で初期化・解錠し、完了時は同じContextを再利用する
+let audioCtx = null;
+export const ensureAudio = () => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.2, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    o.start(); o.stop(ctx.currentTime + 0.6);
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    // 無音を一瞬再生して解錠（iOS対策）
+    const buf = audioCtx.createBuffer(1, 1, 22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
   } catch { /* 非対応ブラウザは無視 */ }
 };
 
-// 獲得ファンファーレ（ド→ミ→ソ→ド の上昇アルペジオ）
+// 単音を鳴らすヘルパー
+const tone = (freq, delay, dur = 0.5, vol = 0.18, type = "sine") => {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = type;
+  o.frequency.value = freq;
+  const t0 = audioCtx.currentTime + delay;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+};
+
+// 休憩終了音（ピロリン）
+const beep = () => {
+  try {
+    ensureAudio();
+    tone(880, 0, 0.4);
+    tone(1174.7, 0.15, 0.5);
+  } catch { /* 非対応ブラウザは無視 */ }
+};
+
+// 獲得ファンファーレ（ド→ミ→ソ→ド＋キラッ）
 const chime = () => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [[523.25, 0], [659.25, 0.12], [783.99, 0.24], [1046.5, 0.36]].forEach(([f, t]) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.type = "sine";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
-      g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.5);
-      o.start(ctx.currentTime + t);
-      o.stop(ctx.currentTime + t + 0.55);
-    });
+    ensureAudio();
+    [[523.25, 0], [659.25, 0.12], [783.99, 0.24], [1046.5, 0.36]].forEach(([f, t]) => tone(f, t, 0.55));
+    tone(1568, 0.5, 0.7, 0.12, "triangle");
+    tone(2093, 0.62, 0.6, 0.08, "triangle");
   } catch { /* 非対応ブラウザは無視 */ }
 };
 
@@ -439,7 +457,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           </div>
 
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <button onClick={() => setSwRunning((r) => !r)}
+            <button onClick={() => { ensureAudio(); setSwRunning((r) => !r); }}
               style={{ flex: 1, maxWidth: 150, padding: "13px 0", borderRadius: 14, border: "none", background: swRunning ? C.yellow : C.aqua, color: C.ink, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
               {swRunning ? "一時停止" : swElapsed > 0 ? "再開" : "スタート"}
             </button>
@@ -504,6 +522,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         {/* コントロール */}
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
           <button onClick={() => {
+            ensureAudio(); // ユーザー操作中に音声を解錠（スリープ復帰後も完了音が鳴るように）
             if (!running && "Notification" in window && Notification.permission === "default") {
               Notification.requestPermission().catch(() => {});
             }
