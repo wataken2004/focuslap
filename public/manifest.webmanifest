@@ -1,7 +1,7 @@
 {
   "name": "FocusLap",
   "short_name": "FocusLap",
-  "description": "集中すると魚が育つ勉強管理アプリ",
+  "description": "集中すると魚が増えるタスク管理アプリ",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#D6EFEE",

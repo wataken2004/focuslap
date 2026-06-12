@@ -2,6 +2,7 @@ import { useState } from "react";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth, googleProvider, isFirebaseConfigured } from "../firebase.js";
 import { C } from "../shared.jsx";
+import { FishSVG } from "../fish.jsx";
 
 export function LoginScreen({ onGuestLogin, onGoogleToken }) {
   const [loading, setLoading] = useState(false);
@@ -26,10 +27,21 @@ export function LoginScreen({ onGuestLogin, onGoogleToken }) {
       alignItems: "center", justifyContent: "center", padding: 24,
       fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",
     }}>
-      <div style={{ fontSize: 52, marginBottom: 8 }}>🐠</div>
+      <style>{`
+        @keyframes loginBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes loginBubble { 0%{transform:translateY(0);opacity:0} 15%{opacity:.7} 100%{transform:translateY(-70px);opacity:0} }
+      `}</style>
+      <div style={{ position: "relative", marginBottom: 10 }}>
+        {[[-26, 4.2, 0], [96, 3.4, 1.1], [40, 5, 2.2]].map(([x, dur, delay], i) => (
+          <div key={i} style={{ position: "absolute", left: x, bottom: 10, width: 7 + i * 2, height: 7 + i * 2, borderRadius: 999, border: `2px solid #7FD6D4`, opacity: 0, animation: `loginBubble ${dur}s ease-out ${delay}s infinite` }} />
+        ))}
+        <div style={{ animation: "loginBob 2.6s ease-in-out infinite" }}>
+          <FishSVG type="🐠" size={110} />
+        </div>
+      </div>
       <div style={{ fontSize: 28, fontWeight: 800, color: C.ink, marginBottom: 4 }}>FocusLap</div>
       <div style={{ fontSize: 13, color: C.sub, marginBottom: 40, textAlign: "center" }}>
-        集中すると魚が育つ勉強管理アプリ
+        集中すると魚が増えるタスク管理アプリ
       </div>
 
       <div style={{ width: "100%", maxWidth: 360, background: C.card, borderRadius: 20, padding: 28, border: `1px solid ${C.line}` }}>
