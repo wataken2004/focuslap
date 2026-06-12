@@ -66,6 +66,7 @@ scripts/
     phoneMode: boolean;       // 他アプリ使用中も魚が逃げない
     autoRepeat: boolean;      // 休憩後に自動で次の集中を開始
     hourlyReminder: boolean;  // 未完了タスクの1時間ごと通知
+    timerKind: "timer" | "stopwatch";  // ポモドーロ / カウントアップ計測
   }
   collection: { [fishEmoji: string]: number }  // 魚ごとの獲得数
   escapes: number; escapesDate: string         // 逃げた魚（日ごとにリセット）
@@ -80,7 +81,8 @@ ArchiveEntry = { id /* 元taskId */, title, goalTitle: string|null, goalType: "g
 Goal    = { id, title, date: string|null, type: "goal"|"work" }
 Task    = { id, title, goalId: string|null, due: string|null,
             startTime: string|null /* "HH:MM" */, done: boolean, note?: string }
-Session = { date: string, minutes: number, taskId: string|null, fish: string, manual?: true }
+Session = { date: string, minutes: number, taskId: string|null, fish: string,
+            manual?: true /* あとから記録 */, stopwatch?: true /* ストップウォッチ計測 */ }
 ```
 
 その他のFirestoreコレクション：
@@ -124,6 +126,12 @@ GitHub Actions の Admin SDK はルールをバイパスする。
 - **escapes** は日ごとにリセット（escapesDate で管理）
 - 完了時：chime（和音）＋Celebration オーバーレイ（紙吹雪・通算n匹目）＋Notification
 - タスク選択は optgroup でグループ化（今日やる→目標ごと→その他）。タスク選択時に note（今回やることメモ）を編集可
+
+### ストップウォッチモード（settings.timerKind === "stopwatch"）
+- カウントアップ計測。「終了して記録」を押した時点の分数で `fishForMinutes` の魚を獲得（5分未満は記録不可）
+- 離脱で魚は逃げないが、1分超の離脱時間はカウントから自動除外（phoneMode中は除外しない）
+- 1分超の計測をリセット（破棄）すると escape 扱い
+- pendingSession（終了push）はポモドーロ専用。実行中はタイマー種別の切替不可
 
 ---
 

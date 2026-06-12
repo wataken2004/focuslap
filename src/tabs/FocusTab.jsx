@@ -94,6 +94,12 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const [banner, setBanner] = useState(null);
   const [celebration, setCelebration] = useState(null);
   const [manualMin, setManualMin] = useState(25);
+  // ストップウォッチ（カウントアップ計測）
+  const [swElapsed, setSwElapsed] = useState(0); // 経過秒
+  const [swRunning, setSwRunning] = useState(false);
+  const swStartRef = useRef(null);   // 計測開始時刻（一時停止分を調整済み）
+  const swHiddenRef = useRef(null);  // 画面が隠れた時刻
+  const timerKind = settings.timerKind === "stopwatch" ? "stopwatch" : "timer";
   const ref = useRef();
   const endAtRef = useRef(null);    // タイマー終了予定時刻（実時間基準）
   const hiddenAtRef = useRef(null); // 画面が隠れた時刻
@@ -152,18 +158,56 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [running, mode, settings.work, settings.phoneMode]);
 
+  // ストップウォッチ本体（実時間基準）
+  useEffect(() => {
+    if (!swRunning) return;
+    swStartRef.current = Date.now() - swElapsed * 1000;
+    const iv = setInterval(() => {
+      setSwElapsed(Math.floor((Date.now() - swStartRef.current) / 1000));
+    }, 500);
+    return () => clearInterval(iv);
+  }, [swRunning]);
+
+  // ストップウォッチの離脱処理：魚は逃げないが、1分超の離脱時間はカウントから除外
+  // （スマホ学習モードON中は離脱中もカウント継続）
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) {
+        if (swRunning) swHiddenRef.current = Date.now();
+        return;
+      }
+      if (!swHiddenRef.current) return;
+      const away = Date.now() - swHiddenRef.current;
+      swHiddenRef.current = null;
+      if (swRunning && away > 60000 && !settings.phoneMode) {
+        swStartRef.current += away;
+        setSwElapsed(Math.floor((Date.now() - swStartRef.current) / 1000));
+        flash("🌙 離れていた時間は計測から除外しました", "#9FD9D8");
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [swRunning, settings.phoneMode]);
+
   const flash = (text, color) => {
     setBanner({ text, color });
     setTimeout(() => setBanner(null), 4000);
   };
 
-  // タブタイトルに残り時間を表示
+  // タブタイトルに経過/残り時間を表示
   useEffect(() => {
-    document.title = running
-      ? `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")} ${mode === "work" ? "⏱" : "☕"} FocusLap`
-      : "FocusLap";
+    if (running) {
+      document.title = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")} ${mode === "work" ? "⏱" : "☕"} FocusLap`;
+    } else if (swRunning) {
+      const h = Math.floor(swElapsed / 3600);
+      const m = String(Math.floor((swElapsed % 3600) / 60)).padStart(2, "0");
+      const s = String(swElapsed % 60).padStart(2, "0");
+      document.title = `${h > 0 ? h + ":" : ""}${m}:${s} ⏲ FocusLap`;
+    } else {
+      document.title = "FocusLap";
+    }
     return () => { document.title = "FocusLap"; };
-  }, [secs, running, mode]);
+  }, [secs, running, mode, swElapsed, swRunning]);
 
   // タイマーが0になったとき
   useEffect(() => {
@@ -223,6 +267,37 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     chime();
   };
 
+  // ストップウォッチを終了して記録（5分以上で魚を獲得）
+  const finishStopwatch = () => {
+    const min = Math.floor(swElapsed / 60);
+    setSwRunning(false);
+    if (min < 5) {
+      flash("5分以上の計測で記録できます", "#FF9B9B");
+      return;
+    }
+    const fish = fishForMinutes(min);
+    const newCount = (data.collection[fish.e] || 0) + 1;
+    update((d) => {
+      d.sessions.push({ date: todayStr(), minutes: min, taskId: taskId || null, fish: fish.e, stopwatch: true });
+      d.collection[fish.e] = (d.collection[fish.e] || 0) + 1;
+      return d;
+    });
+    setCelebration({ fish: fish.e, name: fish.name, count: newCount });
+    chime();
+    notify(`${min}分の集中を記録しました！`);
+    setSwElapsed(0);
+  };
+
+  // ストップウォッチを破棄（1分超の計測を捨てると魚が逃げる）
+  const resetStopwatch = () => {
+    if (swElapsed > 60) {
+      update((d) => { if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); } d.escapes += 1; return d; });
+      flash("💨 計測を破棄…魚が逃げてしまった", "#FF9B9B");
+    }
+    setSwRunning(false);
+    setSwElapsed(0);
+  };
+
   const quickAdd = () => {
     if (!quickTitle.trim()) return;
     const id = uid();
@@ -258,6 +333,13 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");
   const ss = String(secs % 60).padStart(2, "0");
+
+  // ストップウォッチ表示用
+  const swH = Math.floor(swElapsed / 3600);
+  const swM = String(Math.floor((swElapsed % 3600) / 60)).padStart(2, "0");
+  const swS = String(swElapsed % 60).padStart(2, "0");
+  const swFish = fishForMinutes(Math.max(5, Math.floor(swElapsed / 60)));
+  const swOwned = (data.collection[swFish.e] || 0) > 0;
 
   // 今日獲得した魚
   const todayFishCounts = todaySessions.reduce((acc, s) => {
@@ -310,7 +392,71 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, cursor: "pointer" }}>追加</button>
       </div>
 
-      {/* タイマーパネル */}
+      {/* タイマー種別切替 */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        {[["timer", "⏱ ポモドーロ"], ["stopwatch", "⏲ ストップウォッチ"]].map(([k, l]) => (
+          <button key={k}
+            onClick={() => {
+              if (running || swRunning) { flash("実行中は切り替えできません", "#FF9B9B"); return; }
+              update((d) => { d.settings.timerKind = k; return d; });
+            }}
+            style={{ flex: 1, padding: "9px 0", borderRadius: 12, border: `1px solid ${timerKind === k ? C.deepAqua : C.line}`, background: timerKind === k ? C.deepAqua : C.card, color: timerKind === k ? "#fff" : C.sub, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {timerKind === "stopwatch" ? (
+        /* ===== ストップウォッチパネル ===== */
+        <div style={{ background: C.ink, borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
+          <div style={{ fontSize: 12, letterSpacing: "0.2em", color: "#7FD6D4", fontWeight: 700 }}>
+            STOPWATCH — 勉強した時間をそのまま記録
+          </div>
+          <div style={{ fontSize: 54, fontWeight: 800, fontVariantNumeric: "tabular-nums", margin: "4px 0 8px" }}>
+            {swH > 0 ? `${swH}:` : ""}{swM}:{swS}
+          </div>
+          <div style={{ fontSize: 12, color: "#9FD9D8", marginBottom: 12 }}>
+            {swElapsed >= 300
+              ? <>いま終了すると獲得：{swOwned ? <>{swFish.e} <strong>{swFish.name}</strong></> : <strong>？？？（おたのしみ）</strong>}</>
+              : "5分以上の計測で魚を獲得できます"}
+          </div>
+
+          {/* ミニ水槽 */}
+          <div style={{ position: "relative", height: 100, borderRadius: 16, background: "linear-gradient(180deg,#155A8A 0%,#0E3A60 60%,#0B2C4C 100%)", overflow: "hidden", marginBottom: 14 }}>
+            {[14, 38, 70, 88].map((x, i) => (
+              <div key={i} style={{ position: "absolute", left: `${x}%`, bottom: 0, width: 6, height: 6, borderRadius: 999, background: "rgba(255,255,255,0.35)", animation: `bubble ${3 + i}s linear infinite`, animationDelay: `${i * 0.9}s` }} />
+            ))}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 14, background: "#C9B07A", opacity: 0.85 }} />
+            <div style={{ position: "absolute", bottom: 6, left: 14, fontSize: 18 }}>🪸</div>
+            <div style={{ position: "absolute", bottom: 6, right: 18, fontSize: 16 }}>🌿</div>
+            <div style={{ position: "absolute", top: 24, left: "40%" }}>
+              <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
+                <FishSVG type={swFish.e} size={44}
+                  style={{ transform: "scaleX(-1)", ...(swOwned ? {} : { filter: "grayscale(1) brightness(0) invert(0.45)", opacity: 0.85 }) }} />
+              </div>
+            </div>
+            {banner && <div style={{ position: "absolute", top: 6, left: 0, right: 0, fontSize: 11, color: banner.color, fontWeight: 800 }}>{banner.text}</div>}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+            <button onClick={() => setSwRunning((r) => !r)}
+              style={{ flex: 1, maxWidth: 150, padding: "13px 0", borderRadius: 14, border: "none", background: swRunning ? C.yellow : C.aqua, color: C.ink, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+              {swRunning ? "一時停止" : swElapsed > 0 ? "再開" : "スタート"}
+            </button>
+            <button onClick={finishStopwatch}
+              style={{ padding: "13px 14px", borderRadius: 14, border: "none", background: swElapsed >= 300 ? C.yellow : "rgba(255,255,255,0.15)", color: swElapsed >= 300 ? C.ink : "#9FD9D8", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+              ✔ 終了して記録
+            </button>
+            <button onClick={resetStopwatch}
+              style={{ padding: "13px 12px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#fff", cursor: "pointer", fontSize: 13 }}>
+              リセット
+            </button>
+          </div>
+          <div style={{ fontSize: 10, color: "#7593A8", marginTop: 8 }}>
+            ※ 1分以上アプリを離れた時間は自動でカウントから除外されます（📱スマホ学習モードON中は除外なし）
+          </div>
+        </div>
+      ) : (
       <div style={{ background: C.ink, borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
         <div style={{ fontSize: 12, letterSpacing: "0.2em", color: mode === "work" ? "#7FD6D4" : C.yellow, fontWeight: 700 }}>
           {mode === "work" ? "WORK — 集中タイム" : "REST — 休憩タイム"}
@@ -379,6 +525,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           {mode === "work" ? "休憩に切り替え" : "ワークに切り替え"}
         </button>
       </div>
+      )}
 
       {/* 今日の獲得魚 */}
       {Object.keys(todayFishCounts).length > 0 && (
@@ -416,7 +563,8 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         </div>
       </div>
 
-      {/* タイマー設定：魚カードで時間を選択 */}
+      {/* タイマー設定：魚カードで時間を選択（ポモドーロ時のみ） */}
+      {timerKind === "timer" && (
       <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 700, marginBottom: 10 }}>
           集中時間を選ぶ（魚をタップ）
@@ -452,6 +600,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           <span style={{ fontSize: 12, color: C.sub }}>分</span>
         </div>
       </div>
+      )}
 
       {/* スマホ学習モード */}
       <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${settings.phoneMode ? C.aqua : C.line}` }}>

@@ -25,6 +25,7 @@ const appNotify = (msg) => {
 const HELP = {
   focus: [
     "下の魚カードで集中時間を選んでスタート。時間が長いほどレアな魚が獲れます（未獲得の魚はシルエットで、獲るまでのお楽しみ）",
+    "⏲ストップウォッチに切り替えると時間を計り上げて記録できます。「終了して記録」を押した時点の時間で魚を獲得（5分以上）",
     "画面スリープはOK。ただし1分以上アプリを離れると魚が逃げます。スマホで勉強するときは📱スマホ学習モードをONに",
     "🔁繰り返しモードONなら、休憩が終わると自動で次の集中が始まります",
     "タイマーなしで勉強した分は「✏️あとから記録」で追加すれば、ちゃんと魚がもらえます",
@@ -105,6 +106,7 @@ function migrateData(d) {
   if (typeof d.settings.phoneMode !== "boolean") d.settings.phoneMode = false;
   if (typeof d.settings.autoRepeat !== "boolean") d.settings.autoRepeat = false;
   if (typeof d.settings.hourlyReminder !== "boolean") d.settings.hourlyReminder = false;
+  if (d.settings.timerKind !== "timer" && d.settings.timerKind !== "stopwatch") d.settings.timerKind = "timer";
   // 逃げた魚カウントは日ごとにリセット
   if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); }
   d.goals.forEach((g) => { if (!g.type) g.type = "goal"; });
