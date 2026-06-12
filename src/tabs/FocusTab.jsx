@@ -101,6 +101,10 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const total = (mode === "work" ? settings.work : settings.rest) * 60;
   const progress = 1 - secs / total;
   const earnedFish = fishForMinutes(settings.work);
+  // 未獲得の魚は名前・姿を隠す（ネタバレ防止）
+  const earnedOwned = (data.collection[earnedFish.e] || 0) > 0;
+  const manualFish = fishForMinutes(Math.min(300, Math.max(5, parseInt(manualMin) || 5)));
+  const manualOwned = (data.collection[manualFish.e] || 0) > 0;
 
   // タイマー本体（終了時刻との差分で計算：バックグラウンドでも狂わない）
   useEffect(() => {
@@ -111,6 +115,17 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
     }, 250);
     return () => clearInterval(ref.current);
   }, [running]);
+
+  // アプリを閉じていても「集中終了」をプッシュ通知できるよう、終了予定をデータに記録
+  // （GitHub Actionsが定期的にチェックして通知を送る）
+  useEffect(() => {
+    if (running && mode === "work" && endAtRef.current) {
+      const endAt = endAtRef.current;
+      update((d) => { d.pendingSession = { endAt, minutes: settings.work }; return d; });
+    } else if (data.pendingSession) {
+      update((d) => { delete d.pendingSession; return d; });
+    }
+  }, [running, mode]);
 
   // 離脱判定：画面スリープや1分以内の離脱は許す。
   // 1分以上離れて戻ってきたら魚が逃げる（ただし離脱中にタイマー満了していれば獲得扱い）
@@ -310,7 +325,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         {/* 今回獲得できる魚のプレビュー */}
         {mode === "work" && (
           <div style={{ fontSize: 12, color: "#9FD9D8", marginBottom: 12 }}>
-            このセッションで獲得：{earnedFish.e} <strong>{earnedFish.name}</strong>
+            このセッションで獲得：{earnedOwned ? <>{earnedFish.e} <strong>{earnedFish.name}</strong></> : <strong>？？？（おたのしみ）</strong>}
           </div>
         )}
 
@@ -331,7 +346,8 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             filter: banner?.color === C.yellow ? "drop-shadow(0 0 8px #F5BE3D)" : "none",
           }}>
             <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
-              <FishSVG type={earnedFish.e} size={Math.max(stage.size, 24) * 1.6} style={{ transform: "scaleX(-1)" }} />
+              <FishSVG type={earnedFish.e} size={Math.max(stage.size, 24) * 1.6}
+                style={{ transform: "scaleX(-1)", ...(earnedOwned ? {} : { filter: "grayscale(1) brightness(0) invert(0.45)", opacity: 0.85 }) }} />
             </div>
           </div>
           {banner && (
@@ -408,6 +424,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6, marginBottom: 12 }}>
           {FISHES.map((f) => {
             const selected = data.settings.work === f.minutes;
+            const isOwned = (data.collection[f.e] || 0) > 0;
             return (
               <button key={f.e}
                 onClick={() => { update((d) => { d.settings.work = f.minutes; return d; }); reset("work", f.minutes); }}
@@ -416,8 +433,12 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
                   border: `2px solid ${selected ? C.aqua : C.line}`,
                   background: selected ? "#E6F5F5" : "#fff",
                 }}>
-                <div style={{ display: "flex", justifyContent: "center" }}><FishSVG type={f.e} size={38} /></div>
-                <div style={{ fontSize: 10, fontWeight: 800, color: selected ? C.deepAqua : C.ink, marginTop: 2 }}>{f.name}</div>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <FishSVG type={f.e} size={38} style={isOwned ? undefined : { filter: "grayscale(1) brightness(0.25)", opacity: 0.45 }} />
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: selected ? C.deepAqua : isOwned ? C.ink : C.sub, marginTop: 2 }}>
+                  {isOwned ? f.name : "？？？"}
+                </div>
                 <div style={{ fontSize: 10, color: C.sub }}>{f.minutes}分</div>
               </button>
             );
@@ -478,7 +499,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             style={{ width: 64, padding: "8px", borderRadius: 8, border: `1px solid ${C.line}`, textAlign: "center", fontSize: 14 }} />
           <span style={{ fontSize: 12, color: C.sub }}>分</span>
           <span style={{ fontSize: 12, color: C.sub }}>
-            → {fishForMinutes(Math.min(300, Math.max(5, parseInt(manualMin) || 5))).e} {fishForMinutes(Math.min(300, Math.max(5, parseInt(manualMin) || 5))).name}を獲得
+            → {manualOwned ? `${manualFish.e} ${manualFish.name}` : "？？？"}を獲得
           </span>
           <button onClick={addManual}
             style={{ marginLeft: "auto", padding: "9px 18px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>

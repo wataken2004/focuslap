@@ -35,44 +35,54 @@ function FishSpotlight({ fish, count, onClose }) {
   );
 }
 
-/* ---- メモ入力コンポーネント ---- */
+/* ---- メモ入力コンポーネント（保存ボタン方式・スマホ対応） ---- */
 function MemoField({ id, memos, update }) {
   const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
   const text = memos?.[id] ?? "";
+
+  if (!editing) {
+    return (
+      <button type="button"
+        onClick={() => { setDraft(text); setEditing(true); }}
+        style={{
+          width: "100%", textAlign: "left", marginTop: 8, padding: "9px 10px", borderRadius: 10,
+          border: `1px dashed ${text ? C.aqua : C.line}`,
+          background: text ? "#F0FAFA" : "#fff",
+          color: text ? C.ink : C.sub, fontSize: 13, cursor: "pointer", whiteSpace: "pre-wrap",
+        }}>
+        {text || "✏️ メモを追加…"}
+      </button>
+    );
+  }
 
   return (
     <div style={{ marginTop: 8 }}>
-      {editing ? (
-        <div>
-          <textarea
-            defaultValue={text}
-            autoFocus
-            onBlur={(e) => {
-              update((d) => { if (!d.memos) d.memos = {}; d.memos[id] = e.target.value; return d; });
-              setEditing(false);
-            }}
-            placeholder="メモを入力…"
-            style={{
-              width: "100%", boxSizing: "border-box", padding: "8px 10px",
-              borderRadius: 10, border: `1px solid ${C.aqua}`, fontSize: 13,
-              resize: "vertical", minHeight: 64, fontFamily: "inherit",
-            }}
-          />
-          <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>フォーカスを外すと保存されます</div>
-        </div>
-      ) : (
-        <button
-          onClick={() => setEditing(true)}
-          style={{
-            width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 10,
-            border: `1px dashed ${text ? C.aqua : C.line}`,
-            background: text ? "#F0FAFA" : "transparent",
-            color: text ? C.ink : C.sub, fontSize: 13, cursor: "pointer",
-          }}
-        >
-          {text ? text : "✏️ メモを追加…"}
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        autoFocus
+        placeholder="メモを入力…"
+        style={{
+          width: "100%", boxSizing: "border-box", padding: "8px 10px",
+          borderRadius: 10, border: `1px solid ${C.aqua}`, fontSize: 13,
+          resize: "vertical", minHeight: 64, fontFamily: "inherit", background: "#fff",
+        }}
+      />
+      <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+        <button type="button" onClick={() => setEditing(false)}
+          style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          キャンセル
         </button>
-      )}
+        <button type="button"
+          onClick={() => {
+            update((d) => { if (!d.memos) d.memos = {}; d.memos[id] = draft; return d; });
+            setEditing(false);
+          }}
+          style={{ padding: "7px 14px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+          保存
+        </button>
+      </div>
     </div>
   );
 }

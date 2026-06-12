@@ -62,11 +62,24 @@ for (const userRef of userRefs) {
       }
     }
 
+    // ③ 集中セッション終了の通知（終了後3時間以内・1回だけ。魚の名前は開けてのお楽しみ）
+    const ps = d.pendingSession;
+    if (ps && ps.endAt && Date.now() >= ps.endAt && Date.now() - ps.endAt < 3 * 3600000) {
+      const key = `end:${ps.endAt}`;
+      if (!sent[key]) {
+        sent[key] = true;
+        messages.push({ title: "⏱ 集中終了！", body: `${ps.minutes}分やりきった！アプリに戻って魚を受け取ろう 🐟` });
+      }
+    }
+
     if (messages.length === 0) continue;
 
-    // 今日以外の送信済みキーを掃除して保存
+    // 古い送信済みキーを掃除して保存（今日の分とここ24時間のセッション終了分だけ残す）
     const pruned = {};
-    for (const k of Object.keys(sent)) if (k.startsWith(today)) pruned[k] = true;
+    for (const k of Object.keys(sent)) {
+      if (k.startsWith(today)) pruned[k] = true;
+      else if (k.startsWith("end:") && Date.now() - (+k.slice(4) || 0) < 86400000) pruned[k] = true;
+    }
     await stateRef.set({ sent: pruned, lastHourly });
 
     // 全端末に送信（無効になった購読は削除）
