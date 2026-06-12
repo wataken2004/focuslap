@@ -6,7 +6,7 @@ import { FishSVG } from "../fish.jsx";
 function FishSpotlight({ fish, count, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(6,18,32,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, cursor: "pointer" }}>
-      <style>{`@keyframes spotSwim { 0%{left:-28%;transform:scaleX(-1)} 49%{left:74%;transform:scaleX(-1)} 50%{left:74%;transform:scaleX(1)} 99%{left:-28%;transform:scaleX(1)} 100%{left:-28%;transform:scaleX(-1)} }`}</style>
+      <style>{`@keyframes spotSway { 0%,100%{transform:translateX(-14px)} 50%{transform:translateX(14px)} }`}</style>
       <div style={{ width: "min(92vw, 420px)", borderRadius: 20, overflow: "hidden", background: "#0B2C4C", border: "1px solid rgba(255,255,255,0.15)" }}>
         <div style={{ position: "relative", height: 190, background: "linear-gradient(180deg,#1B6FA8 0%,#11497A 60%,#0B2C4C 100%)", overflow: "hidden" }}>
           {[16, 42, 68, 88].map((x, i) => (
@@ -15,9 +15,12 @@ function FishSpotlight({ fish, count, onClose }) {
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 16, background: "#C9B07A" }} />
           <div style={{ position: "absolute", bottom: 10, left: 14, fontSize: 20 }}>🪸</div>
           <div style={{ position: "absolute", bottom: 10, right: 16, fontSize: 18 }}>🌿</div>
-          <div style={{ position: "absolute", top: 40, left: "-28%", animation: "spotSwim 9s ease-in-out infinite" }}>
-            <div style={{ animation: "bob 2.2s ease-in-out infinite" }}>
-              <FishSVG type={fish.e} size={140} style={fish.owned === false ? { filter: "grayscale(1) brightness(0.35)" } : undefined} />
+          {/* 魚は中央に表示（左右にゆらゆら＋上下にぷかぷか） */}
+          <div style={{ position: "absolute", top: 36, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
+            <div style={{ animation: "spotSway 5s ease-in-out infinite" }}>
+              <div style={{ animation: "bob 2.2s ease-in-out infinite" }}>
+                <FishSVG type={fish.e} size={140} style={fish.owned === false ? { filter: "grayscale(1) brightness(0.35)" } : undefined} />
+              </div>
             </div>
           </div>
         </div>
