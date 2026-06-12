@@ -133,10 +133,84 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
 
 /* ================= TaskRow ================= */
 export function TaskRow({ t, data, update, growthOf, onFocus }) {
+  const [editing, setEditing] = useState(false);
+  const [eTitle, setETitle] = useState("");
+  const [eDue, setEDue] = useState("");
+  const [eStart, setEStart] = useState("");
+  const [eGoal, setEGoal] = useState("");
+
+  const startEdit = () => {
+    setETitle(t.title);
+    setEDue(t.due || "");
+    setEStart(t.startTime || "");
+    setEGoal(t.goalId || "");
+    setEditing(true);
+  };
+
+  const saveEdit = () => {
+    if (!eTitle.trim()) return;
+    update((d) => {
+      const x = d.tasks.find((x) => x.id === t.id);
+      if (!x) return d;
+      x.title = eTitle.trim();
+      x.due = eDue || null;
+      x.startTime = eStart || null;
+      x.goalId = eGoal || null;
+      // 完了済みならアーカイブ側の記録も同期
+      const a = d.archive?.find((y) => y.id === t.id);
+      if (a) {
+        const gg = d.goals.find((gg) => gg.id === x.goalId);
+        a.title = x.title;
+        a.due = x.due;
+        a.goalTitle = gg?.title ?? null;
+        a.goalType = gg?.type ?? null;
+      }
+      return d;
+    });
+    setEditing(false);
+  };
+
   const g = data.goals.find((x) => x.id === t.goalId);
   const growth = growthOf(t.id);
   const stage = stageOf(growth);
   const overdue = t.due && !t.done && t.due < todayStr();
+
+  // 編集モード
+  if (editing) {
+    return (
+      <div style={{ background: C.card, border: `2px solid ${C.aqua}`, borderRadius: 14, padding: 12, marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}>✎ タスクを編集</div>
+        <input value={eTitle} onChange={(e) => setETitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+          style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 14, marginBottom: 8 }} />
+        <div style={{ display: "flex", gap: 10, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <label style={{ fontSize: 11, color: C.sub }}>期限
+            <input type="date" value={eDue} onChange={(e) => setEDue(e.target.value)}
+              style={{ marginLeft: 4, padding: "7px 8px", borderRadius: 8, border: `1px solid ${C.line}`, fontSize: 12 }} />
+          </label>
+          <label style={{ fontSize: 11, color: C.sub }}>開始
+            <input type="time" value={eStart} onChange={(e) => setEStart(e.target.value)}
+              style={{ marginLeft: 4, padding: "7px 8px", borderRadius: 8, border: `1px solid ${C.line}`, fontSize: 12 }} />
+          </label>
+          {(eDue || eStart) && (
+            <button onClick={() => { setEDue(""); setEStart(""); }}
+              style={{ padding: "6px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 11, cursor: "pointer" }}>クリア</button>
+          )}
+        </div>
+        <select value={eGoal} onChange={(e) => setEGoal(e.target.value)}
+          style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff", marginBottom: 10 }}>
+          <option value="">目標と紐付けない</option>
+          {data.goals.map((gg) => <option key={gg.id} value={gg.id}>{gg.type === "work" ? "💼" : "🎯"} {gg.title}</option>)}
+        </select>
+        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+          <button onClick={() => setEditing(false)}
+            style={{ padding: "8px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>キャンセル</button>
+          <button onClick={saveEdit}
+            style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: eTitle.trim() ? C.aqua : "#BFDEDE", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>保存</button>
+        </div>
+      </div>
+    );
+  }
 
   // タスクに紐づいたセッションの中で最新のセッションから魚を取得
   const lastSession = [...data.sessions].reverse().find((s) => s.taskId === t.id);
@@ -177,6 +251,8 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
           {t.startTime ? `　⏰ ${t.startTime}〜` : ""}
         </div>
       </div>
+      <button onClick={startEdit} title="タスクを編集"
+        style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 2px" }}>✎</button>
       {onFocus && !t.done && (
         <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
           style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>⏱</button>
