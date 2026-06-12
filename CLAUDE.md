@@ -144,11 +144,14 @@ GitHub Actions の Admin SDK はルールをバイパスする。
 **アプリを閉じていても届くWeb Push**：
 - 購読：`push.js enablePush()` → VAPID公開鍵で subscribe → Firestoreに保存。⚙️設定/タスクタブ/初回バナーから有効化
 - 受信：`sw.js` の push ハンドラ（**アプリが可視状態のときは表示せず**アプリ内通知に譲る）
-- 送信：`.github/workflows/push-notify.yml`（cron */5）→ `scripts/send-push.mjs`
+- 送信：`.github/workflows/push-notify.yml` → `scripts/send-push.mjs`
+  - **起動はcron-job.orgが担当**：GitHubのcron（*/5）は数時間飛ぶことがあり信頼できないため、
+    cron-job.org が5分ごとに workflow_dispatch API を POST して起動する
+    （認証は fine-grained PAT `focuslap-cron`／Actions: Read and write／無期限）
   - ①開始時刻の10分前〜定刻 ②hourlyリマインド（8〜22時） ③pendingSession による集中終了通知（終了後3時間以内）
   - 重複防止は `pushMeta/state`、無効購読（404/410）は自動削除
   - keepaliveステップが公式API（workflow enable）で60日自動停止を防ぐ
-- **制約**：GitHubの無料cronは遅延あり（数分〜数十分）。iOSはホーム画面に追加したPWAのみpush可
+- **制約**：通知は最大5〜8分遅れる（5分間隔チェックのため）。iOSはホーム画面に追加したPWAのみpush可
 
 GitHub Secrets: `FIREBASE_SERVICE_ACCOUNT` / `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`
 
@@ -195,6 +198,7 @@ VITE_VAPID_PUBLIC_KEY   # Web Push用（npx web-push generate-vapid-keys）
 
 - `git push origin main` → Vercelが自動デプロイ
 - アイコン変更時は `node scripts/make-icons.mjs` でPNGも再生成してコミット
+- サービス全体像・トラブル対応・バックアップ一覧は `OPERATIONS.md` を参照（ユーザー向け運用ガイド）
 - Firestoreルールは本番設定済み（無期限）。OAuth同意画面は本番公開済み
 - Firebase Auth は Google と メール/パスワード の2プロバイダを有効化済み
 - Google Calendar 連携は廃止済み（googleCalendar.js は削除した）
