@@ -79,7 +79,9 @@ ArchiveEntry = { id /* 元taskId */, title, goalTitle: string|null, goalType: "g
 
 Goal    = { id, title, date: string|null, type: "goal"|"work" }
 Task    = { id, title, goalId: string|null, due: string|null,
-            startTime: string|null /* "HH:MM" */, done: boolean, note?: string }
+            startTime: string|null /* "HH:MM" */, done: boolean, note?: string,
+            repeat?: "daily"|"weekly"|"biweekly"|"monthly"|"bimonthly"|null,
+            nextId?: string /* repeatで自動作成した次回分のid（チェック取消時の掃除用） */ }
 Session = { date: string, minutes: number, taskId: string|null, fish: string,
             manual?: true /* あとから記録 */, stopwatch?: true /* ストップウォッチ計測 */ }
 ```
@@ -91,6 +93,10 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 ### マイグレーション
 `App.jsx: migrateData()` がロード時に旧形式変換・新フィールド補完・escapesの日次リセット・
 既存完了タスクのarchiveバックフィルを行う。**新フィールド追加時は必ずここに追記する。**
+
+### 繰り返しタスク
+- `shared.jsx: REPEATS / nextRepeatDate()`。完了チェック時に次回分タスクを自動生成（dueを周期分進める。月またぎは月末に丸める）
+- 完了側に `nextId` を記録し、チェックを外したら未着手の次回分を削除して取り消す
 
 ### アーカイブの仕組み
 - `shared.jsx: TaskRow` のチェックON時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）。

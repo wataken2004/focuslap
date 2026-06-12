@@ -35,6 +35,26 @@ export const todayStr = () => fmt(new Date());
 export const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 export const uid = () => Math.random().toString(36).slice(2, 9);
 
+/* ---------- 繰り返しタスク ---------- */
+export const REPEATS = { daily: "毎日", weekly: "毎週", biweekly: "隔週", monthly: "毎月", bimonthly: "隔月" };
+
+/** 期限と繰り返し種別から次回の期限を計算（月末はみ出しは月末に丸める） */
+export const nextRepeatDate = (dueStr, repeat) => {
+  const base = dueStr ? new Date(dueStr + "T00:00:00") : new Date();
+  const d = new Date(base);
+  if (repeat === "daily") d.setDate(d.getDate() + 1);
+  else if (repeat === "weekly") d.setDate(d.getDate() + 7);
+  else if (repeat === "biweekly") d.setDate(d.getDate() + 14);
+  else if (repeat === "monthly" || repeat === "bimonthly") {
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + (repeat === "monthly" ? 1 : 2));
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, last));
+  }
+  return fmt(d);
+};
+
 /* ---------- タスクの成長ステージ（セッション回数） ---------- */
 export const stageOf = (g) =>
   g === 0  ? { label: "たまご",   size: 0  } :
@@ -49,6 +69,7 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
   const [goalId, setGoalId] = useState("");
   const [due, setDue] = useState(defaultDue);
   const [startTime, setStartTime] = useState("");
+  const [repeat, setRepeat] = useState("");
 
   useEffect(() => setDue(defaultDue), [defaultDue]);
 
@@ -66,11 +87,19 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
   const add = () => {
     if (!title.trim()) return;
     update((d) => {
-      d.tasks.unshift({ id: uid(), title: title.trim(), goalId: goalId || null, due: due || null, startTime: startTime || null, done: false });
+      d.tasks.unshift({
+        id: uid(), title: title.trim(), goalId: goalId || null,
+        // 繰り返し指定があるのに期限が無い場合は今日を基準にする
+        due: due || (repeat ? todayStr() : null),
+        startTime: startTime || null,
+        repeat: repeat || null,
+        done: false,
+      });
       return d;
     });
     setTitle("");
     setStartTime("");
+    setRepeat("");
     onAdded?.();
   };
 
@@ -116,7 +145,20 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
         <span style={{ fontSize: 11, color: C.sub }}>※ 期限日の当日に通知されます</span>
       </div>
 
-      <span style={label}>④ 長期目標と紐付け（任意）</span>
+      <span style={label}>④ 繰り返し（任意）</span>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {[["", "なし"], ["daily", "毎日"], ["weekly", "毎週"], ["biweekly", "隔週"], ["monthly", "毎月"], ["bimonthly", "隔月"]].map(([v, l]) => (
+          <button key={v} onClick={() => setRepeat(v)}
+            style={{ padding: "7px 12px", borderRadius: 999, border: `1px solid ${repeat === v ? C.deepAqua : C.line}`, background: repeat === v ? C.deepAqua : "#fff", color: repeat === v ? "#fff" : C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{l}</button>
+        ))}
+      </div>
+      {repeat && (
+        <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>
+          🔁 完了すると次回分（{REPEATS[repeat]}）が自動で追加されます
+        </div>
+      )}
+
+      <span style={label}>⑤ 長期目標と紐付け（任意）</span>
       <select value={goalId} onChange={(e) => setGoalId(e.target.value)}
         style={{ width: "100%", padding: "10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff" }}>
         <option value="">紐付けない</option>
@@ -138,12 +180,14 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   const [eDue, setEDue] = useState("");
   const [eStart, setEStart] = useState("");
   const [eGoal, setEGoal] = useState("");
+  const [eRepeat, setERepeat] = useState("");
 
   const startEdit = () => {
     setETitle(t.title);
     setEDue(t.due || "");
     setEStart(t.startTime || "");
     setEGoal(t.goalId || "");
+    setERepeat(t.repeat || "");
     setEditing(true);
   };
 
@@ -153,9 +197,10 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
       const x = d.tasks.find((x) => x.id === t.id);
       if (!x) return d;
       x.title = eTitle.trim();
-      x.due = eDue || null;
+      x.due = eDue || (eRepeat ? todayStr() : null);
       x.startTime = eStart || null;
       x.goalId = eGoal || null;
+      x.repeat = eRepeat || null;
       // 完了済みならアーカイブ側の記録も同期
       const a = d.archive?.find((y) => y.id === t.id);
       if (a) {
@@ -197,6 +242,11 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
               style={{ padding: "6px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 11, cursor: "pointer" }}>クリア</button>
           )}
         </div>
+        <select value={eRepeat} onChange={(e) => setERepeat(e.target.value)}
+          style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff", marginBottom: 8 }}>
+          <option value="">🔁 繰り返しなし</option>
+          {Object.entries(REPEATS).map(([v, l]) => <option key={v} value={v}>🔁 {l}（完了すると次回分を自動追加）</option>)}
+        </select>
         <select value={eGoal} onChange={(e) => setEGoal(e.target.value)}
           style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff", marginBottom: 10 }}>
           <option value="">目標と紐付けない</option>
@@ -235,6 +285,22 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
               sessions: sess.length,
               fish: sess.length ? sess[sess.length - 1].fish : null,
             });
+            // 繰り返しタスク：次回分を自動作成
+            if (x.repeat) {
+              const newId = uid();
+              d.tasks.push({
+                id: newId, title: x.title, goalId: x.goalId,
+                due: nextRepeatDate(x.due, x.repeat),
+                startTime: x.startTime ?? null,
+                repeat: x.repeat, note: x.note, done: false,
+              });
+              x.nextId = newId;
+            }
+          } else if (x.nextId) {
+            // チェックを外したら、自動作成した次回分を取り消す（未着手の場合のみ）
+            const nt = d.tasks.find((y) => y.id === x.nextId);
+            if (nt && !nt.done) d.tasks = d.tasks.filter((y) => y.id !== x.nextId);
+            delete x.nextId;
           }
           return d;
         })}
@@ -249,6 +315,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
           {stage.label}（{growth}回）
           {t.due ? (overdue ? `　期限超過 ${t.due}` : `　期限 ${t.due}`) : ""}
           {t.startTime ? `　⏰ ${t.startTime}〜` : ""}
+          {t.repeat ? `　🔁${REPEATS[t.repeat]}` : ""}
         </div>
       </div>
       <button onClick={startEdit} title="タスクを編集"
