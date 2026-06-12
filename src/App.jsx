@@ -108,6 +108,22 @@ function migrateData(d) {
   // 逃げた魚カウントは日ごとにリセット
   if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); }
   d.goals.forEach((g) => { if (!g.type) g.type = "goal"; });
+  // 完了タスクの永久アーカイブ（タスクを削除しても記録とメモが残る）
+  if (!Array.isArray(d.archive)) d.archive = [];
+  d.tasks.forEach((t) => {
+    if (t.done && !d.archive.some((a) => a.id === t.id)) {
+      const g = d.goals.find((gg) => gg.id === t.goalId);
+      const sess = d.sessions.filter((s) => s.taskId === t.id);
+      d.archive.push({
+        id: t.id, title: t.title,
+        goalTitle: g?.title ?? null, goalType: g?.type ?? null,
+        due: t.due ?? null,
+        completedAt: sess.length ? sess[sess.length - 1].date : todayStr(),
+        sessions: sess.length,
+        fish: sess.length ? sess[sess.length - 1].fish : null,
+      });
+    }
+  });
   // sessions に fish フィールドがなければスキップ（古いデータ互換）
   return d;
 }

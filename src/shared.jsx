@@ -145,7 +145,25 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   return (
     <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
       <button
-        onClick={() => update((d) => { const x = d.tasks.find((x) => x.id === t.id); x.done = !x.done; return d; })}
+        onClick={() => update((d) => {
+          const x = d.tasks.find((x) => x.id === t.id);
+          x.done = !x.done;
+          // 完了したらアーカイブに永久記録（目標名も焼き込み、タスク/目標を消しても残る）
+          if (!Array.isArray(d.archive)) d.archive = [];
+          d.archive = d.archive.filter((a) => a.id !== x.id);
+          if (x.done) {
+            const g = d.goals.find((gg) => gg.id === x.goalId);
+            const sess = d.sessions.filter((s) => s.taskId === x.id);
+            d.archive.push({
+              id: x.id, title: x.title,
+              goalTitle: g?.title ?? null, goalType: g?.type ?? null,
+              due: x.due ?? null, completedAt: todayStr(),
+              sessions: sess.length,
+              fish: sess.length ? sess[sess.length - 1].fish : null,
+            });
+          }
+          return d;
+        })}
         style={{ width: 24, height: 24, borderRadius: 999, border: `2px solid ${t.done ? C.aqua : C.line}`, background: t.done ? C.aqua : "#fff", color: "#fff", cursor: "pointer", fontSize: 13, lineHeight: "20px", padding: 0, flexShrink: 0 }}>
         {t.done ? "✓" : ""}
       </button>

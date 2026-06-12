@@ -71,7 +71,11 @@ scripts/
   escapes: number; escapesDate: string         // 逃げた魚（日ごとにリセット）
   memos: { [taskId: string]: string }          // 完了タスクの振り返りメモ
   pendingSession?: { endAt: number; minutes: number }  // 実行中タイマーの終了予定（push用）
+  archive: ArchiveEntry[]  // 完了タスクの永久記録（タスク/目標を削除しても残る）
 }
+
+ArchiveEntry = { id /* 元taskId */, title, goalTitle: string|null, goalType: "goal"|"work"|null,
+                 due: string|null, completedAt: string, sessions: number, fish: string|null }
 
 Goal    = { id, title, date: string|null, type: "goal"|"work" }
 Task    = { id, title, goalId: string|null, due: string|null,
@@ -84,8 +88,13 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string, ma
 - `users/{uid}/pushMeta/state` — 送信済みキー（重複防止）と lastHourly
 
 ### マイグレーション
-`App.jsx: migrateData()` がロード時に旧形式変換・新フィールド補完・escapesの日次リセットを行う。
-**新フィールド追加時は必ずここに追記する。**
+`App.jsx: migrateData()` がロード時に旧形式変換・新フィールド補完・escapesの日次リセット・
+既存完了タスクのarchiveバックフィルを行う。**新フィールド追加時は必ずここに追記する。**
+
+### アーカイブの仕組み
+- `shared.jsx: TaskRow` のチェックON時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）。
+  チェックOFFで該当エントリ削除（メモは残る）
+- TankTabの振り返りはarchiveを表示する。タスク本体を×で削除しても記録とメモは消えない
 
 ### セキュリティルール
 `users/{userId}/**` は `request.auth.uid == userId` のみ読み書き可。

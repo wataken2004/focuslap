@@ -79,9 +79,8 @@ export function TankTab({ data, update }) {
   const ownedKinds = FISHES.filter((f) => (col[f.e] || 0) > 0).length;
 
   // 振り返りデータ（完了したタスクのみ）
-  const completedTasks = data.tasks.filter((t) => t.done);
-
-  const growthOf = (taskId) => data.sessions.filter((s) => s.taskId === taskId).length;
+  // アーカイブ（完了の永久記録）を新しい順に。タスクや目標を削除しても残る
+  const archive = [...(data.archive ?? [])].sort((a, b) => (b.completedAt || "").localeCompare(a.completedAt || ""));
 
   return (
     <div>
@@ -196,21 +195,23 @@ export function TankTab({ data, update }) {
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 4 }}>🔍 振り返り・メモ</div>
         <div style={{ fontSize: 11, color: C.sub, marginBottom: 12 }}>
-          完了したタスクをタップするとメモを書けます（{completedTasks.length}件）
+          完了したタスクをタップするとメモを書けます（{archive.length}件）。タスクを削除しても記録とメモはここに残ります
         </div>
 
-        {completedTasks.length === 0 && (
+        {archive.length === 0 && (
           <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "20px 0" }}>
             完了したタスクはまだありません。<br />タスクを完了するとここで振り返りができます。
           </div>
         )}
 
-        {completedTasks.map((t) => {
-          const g = data.goals.find((x) => x.id === t.goalId);
-          const sessions = growthOf(t.id);
-          const lastFish = [...data.sessions].reverse().find((s) => s.taskId === t.id);
+        {archive.map((t) => {
           const memo = data.memos?.[t.id] ?? "";
           const isEditing = editingId === t.id;
+          const badge = t.goalTitle
+            ? t.goalType === "work"
+              ? { label: `💼 ${t.goalTitle}`, bg: "#FFF3D6", fg: "#9A6B12" }
+              : { label: `🎯 ${t.goalTitle}`, bg: "#E6F5F5", fg: C.deepAqua }
+            : null;
           return (
             <div key={t.id}
               onClick={() => { if (!isEditing) { setDraft(memo); setEditingId(t.id); } }}
@@ -220,12 +221,14 @@ export function TankTab({ data, update }) {
                 border: `1px solid ${isEditing ? C.aqua : memo ? "#BFE3E2" : C.line}`,
               }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>{lastFish?.fish ?? "✅"}</span>
+                <span style={{ fontSize: 18 }}>{t.fish ?? "✅"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{t.title}</div>
-                  <div style={{ fontSize: 11, color: C.sub }}>
-                    {g && <span style={{ color: C.deepAqua }}>● {g.title}　</span>}
-                    {sessions}回のセッション{t.due && ` · ${t.due}`}
+                  <div style={{ fontSize: 11, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {badge && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: badge.fg, background: badge.bg, padding: "1px 8px", borderRadius: 999 }}>{badge.label}</span>
+                    )}
+                    <span>{t.sessions}回のセッション · {t.completedAt} 完了</span>
                   </div>
                 </div>
                 {!isEditing && (
