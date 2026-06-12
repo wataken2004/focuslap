@@ -315,7 +315,7 @@ export default function FocusLapApp() {
         {tab === "focus" && (
           <FocusTab data={data} update={update} growthOf={growthOf} taskId={focusTaskId} setTaskId={setFocusTaskId} />
         )}
-        {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
+        {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} uid={user?.uid} />}
         {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} googleAccessToken={googleAccessToken} onRequestCalendarAccess={requestCalendarAccess} />}
         {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
         {tab === "tank"  && <TankTab data={data} update={update} />}
