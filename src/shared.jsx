@@ -48,6 +48,7 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
   const [title, setTitle] = useState("");
   const [goalId, setGoalId] = useState("");
   const [due, setDue] = useState(defaultDue);
+  const [startTime, setStartTime] = useState("");
 
   useEffect(() => setDue(defaultDue), [defaultDue]);
 
@@ -65,10 +66,11 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
   const add = () => {
     if (!title.trim()) return;
     update((d) => {
-      d.tasks.unshift({ id: uid(), title: title.trim(), goalId: goalId || null, due: due || null, done: false });
+      d.tasks.unshift({ id: uid(), title: title.trim(), goalId: goalId || null, due: due || null, startTime: startTime || null, done: false });
       return d;
     });
     setTitle("");
+    setStartTime("");
     onAdded?.();
   };
 
@@ -97,7 +99,24 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
           style={{ padding: "7px 8px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 12 }} />
       </div>
 
-      <span style={label}>③ 長期目標と紐付け（任意）</span>
+      <span style={label}>③ 開始予定時刻（任意・5分前に通知）</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <input type="time" value={startTime}
+          onChange={(e) => {
+            setStartTime(e.target.value);
+            if (e.target.value && "Notification" in window && Notification.permission === "default") {
+              Notification.requestPermission().catch(() => {});
+            }
+          }}
+          style={{ padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13 }} />
+        {startTime && (
+          <button onClick={() => setStartTime("")}
+            style={{ padding: "7px 12px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, cursor: "pointer" }}>クリア</button>
+        )}
+        <span style={{ fontSize: 11, color: C.sub }}>※ 期限日の当日に通知されます</span>
+      </div>
+
+      <span style={label}>④ 長期目標と紐付け（任意）</span>
       <select value={goalId} onChange={(e) => setGoalId(e.target.value)}
         style={{ width: "100%", padding: "10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff" }}>
         <option value="">紐付けない</option>
@@ -137,6 +156,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
           {g && <span style={{ color: C.deepAqua, fontWeight: 700 }}>● {g.title}　</span>}
           {stage.label}（{growth}回）
           {t.due ? (overdue ? `　期限超過 ${t.due}` : `　期限 ${t.due}`) : ""}
+          {t.startTime ? `　⏰ ${t.startTime}〜` : ""}
         </div>
       </div>
       {onFocus && !t.done && (

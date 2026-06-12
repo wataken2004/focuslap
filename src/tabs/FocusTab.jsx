@@ -129,7 +129,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         clearInterval(ref.current);
         setRunning(false);
         setSecs(settings.work * 60);
-        update((d) => { d.escapes += 1; return d; });
+        update((d) => { if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); } d.escapes += 1; return d; });
         flash("💨 1分以上アプリを離れたため魚が逃げてしまった…", "#FF9B9B");
       }
     };
@@ -153,8 +153,9 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   // タイマーが0になったとき
   useEffect(() => {
     if (secs > 0) return;
-    clearInterval(ref.current);
-    setRunning(false);
+    // 繰り返しモード中は止めずに次のセッションへ自動移行
+    const repeat = settings.autoRepeat;
+    if (!repeat) { clearInterval(ref.current); setRunning(false); }
     if (mode === "work") {
       const fish = fishForMinutes(settings.work);
       const newCount = (data.collection[fish.e] || 0) + 1;
@@ -167,19 +168,23 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       chime();
       notify(`${fish.e} ${fish.name}を獲得！休憩しましょう`);
       setMode("rest");
-      setSecs(settings.rest * 60);
+      const nextRest = settings.rest * 60;
+      setSecs(nextRest);
+      if (repeat) endAtRef.current = Date.now() + nextRest * 1000;
     } else {
       beep();
-      notify("休憩終了！次のセッションを始めましょう");
+      notify(repeat ? "休憩終了！次のセッションを開始します" : "休憩終了！次のセッションを始めましょう");
       setMode("work");
-      setSecs(settings.work * 60);
+      const nextWork = settings.work * 60;
+      setSecs(nextWork);
+      if (repeat) endAtRef.current = Date.now() + nextWork * 1000;
     }
   }, [secs]);
 
   // workMin: 設定更新の反映を待たずに新しい作業時間を直接指定できる
   const reset = (m = mode, workMin = settings.work) => {
     if (mode === "work" && secs < total && secs > 0 && running) {
-      update((d) => { d.escapes += 1; return d; });
+      update((d) => { if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); } d.escapes += 1; return d; });
       flash("💨 集中を中断…魚が逃げてしまった", C.red);
     }
     clearInterval(ref.current);
@@ -218,6 +223,13 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const todaySessions = data.sessions.filter((s) => s.date === todayStr());
   const minutes = todaySessions.reduce((a, s) => a + s.minutes, 0);
   const openTasks = data.tasks.filter((t) => !t.done);
+  // タスク選択を見やすくグループ化（今日期限→目標ごと→その他）
+  const todayKey = todayStr();
+  const dueToday = openTasks.filter((t) => t.due === todayKey);
+  const groupedTasks = data.goals
+    .map((g) => ({ g, ts: openTasks.filter((t) => t.goalId === g.id && t.due !== todayKey) }))
+    .filter((x) => x.ts.length > 0);
+  const ungroupedTasks = openTasks.filter((t) => !t.goalId && t.due !== todayKey);
 
   const week = useMemo(() => [...Array(7)].map((_, i) => {
     const d = addDays(new Date(), -(6 - i));
@@ -248,8 +260,30 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       <select value={taskId} onChange={(e) => setTaskId(e.target.value)}
         style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, fontSize: 14, color: C.ink, marginBottom: 8 }}>
         <option value="">— 取り組むタスクを選ぶ —</option>
-        {openTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+        {dueToday.length > 0 && (
+          <optgroup label="📅 今日やる">
+            {dueToday.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+          </optgroup>
+        )}
+        {groupedTasks.map(({ g, ts }) => (
+          <optgroup key={g.id} label={`${g.type === "work" ? "💼" : "🎯"} ${g.title}`}>
+            {ts.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+          </optgroup>
+        ))}
+        {ungroupedTasks.length > 0 && (
+          <optgroup label="その他">
+            {ungroupedTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+          </optgroup>
+        )}
       </select>
+
+      {/* 今回やることメモ（任意） */}
+      {task && (
+        <input value={task.note || ""}
+          onChange={(e) => { const v = e.target.value; update((d) => { const x = d.tasks.find((x) => x.id === task.id); if (x) x.note = v; return d; }); }}
+          placeholder="✏️ 今回やることメモ（任意）例：CH3の問題演習"
+          style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: `1px dashed ${C.line}`, fontSize: 12, marginBottom: 8, background: "#FBFEFE" }} />
+      )}
 
       {/* クイック追加 */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
@@ -289,20 +323,17 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           <div style={{ position: "absolute", bottom: 6, left: 14, fontSize: 18 }}>🪸</div>
           <div style={{ position: "absolute", bottom: 6, right: 18, fontSize: 16 }}>🌿</div>
 
-          {task ? (
-            <div style={{
-              position: "absolute", top: 28,
-              left: running || progress > 0 ? `calc(${(progress * 80).toFixed(1)}% + 4%)` : "40%",
-              transition: "left 1s linear",
-              filter: banner?.color === C.yellow ? "drop-shadow(0 0 8px #F5BE3D)" : "none",
-            }}>
-              <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
-                <FishSVG type={earnedFish.e} size={Math.max(stage.size, 24) * 1.6} style={{ transform: "scaleX(-1)" }} />
-              </div>
+          {/* タスク未選択でも魚は泳ぐ */}
+          <div style={{
+            position: "absolute", top: 28,
+            left: running || progress > 0 ? `calc(${(progress * 80).toFixed(1)}% + 4%)` : "40%",
+            transition: "left 1s linear",
+            filter: banner?.color === C.yellow ? "drop-shadow(0 0 8px #F5BE3D)" : "none",
+          }}>
+            <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
+              <FishSVG type={earnedFish.e} size={Math.max(stage.size, 24) * 1.6} style={{ transform: "scaleX(-1)" }} />
             </div>
-          ) : (
-            <div style={{ position: "absolute", top: 36, left: 0, right: 0, fontSize: 11, color: "#9FD9D8" }}>タスクを選ぶと魚が現れます</div>
-          )}
+          </div>
           {banner && (
             <div style={{ position: "absolute", top: 6, left: 0, right: 0, fontSize: 11, color: banner.color, fontWeight: 800 }}>{banner.text}</div>
           )}
@@ -351,7 +382,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
         <Stat label="今日のセッション" value={`${todaySessions.length}回`} />
         <Stat label="今日の集中" value={`${minutes}分`} />
-        <Stat label="逃げた魚" value={`${data.escapes}匹`} />
+        <Stat label="今日逃げた魚" value={`${data.escapesDate === todayStr() ? data.escapes : 0}匹`} />
       </div>
 
       {/* 週間グラフ */}
@@ -414,6 +445,23 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             onClick={() => update((d) => { d.settings.phoneMode = !d.settings.phoneMode; return d; })}
             style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: settings.phoneMode ? C.deepAqua : C.line, color: settings.phoneMode ? "#fff" : C.sub, fontWeight: 800, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>
             {settings.phoneMode ? "ON" : "OFF"}
+          </button>
+        </div>
+
+        <div style={{ height: 1, background: C.line, margin: "12px 0" }} />
+
+        {/* 繰り返しモード */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>🔁 繰り返しモード</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
+              休憩が終わると自動で次の集中を開始します。休憩時間を無駄にしません。
+            </div>
+          </div>
+          <button
+            onClick={() => update((d) => { d.settings.autoRepeat = !d.settings.autoRepeat; return d; })}
+            style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: settings.autoRepeat ? C.deepAqua : C.line, color: settings.autoRepeat ? "#fff" : C.sub, fontWeight: 800, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>
+            {settings.autoRepeat ? "ON" : "OFF"}
           </button>
         </div>
       </div>

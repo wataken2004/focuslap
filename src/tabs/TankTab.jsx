@@ -15,15 +15,19 @@ function FishSpotlight({ fish, count, onClose }) {
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 16, background: "#C9B07A" }} />
           <div style={{ position: "absolute", bottom: 10, left: 14, fontSize: 20 }}>🪸</div>
           <div style={{ position: "absolute", bottom: 10, right: 16, fontSize: 18 }}>🌿</div>
-          <div style={{ position: "absolute", top: 48, left: "-28%", animation: "spotSwim 9s ease-in-out infinite" }}>
+          <div style={{ position: "absolute", top: 40, left: "-28%", animation: "spotSwim 9s ease-in-out infinite" }}>
             <div style={{ animation: "bob 2.2s ease-in-out infinite" }}>
-              <FishSVG type={fish.e} size={120} />
+              <FishSVG type={fish.e} size={140} style={fish.owned === false ? { filter: "grayscale(1) brightness(0.35)" } : undefined} />
             </div>
           </div>
         </div>
         <div style={{ padding: "14px 16px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fish.name}</div>
-          <div style={{ fontSize: 12, color: "#9FD9D8", marginTop: 4 }}>{fish.minutes}分以上の集中で獲得 ・ 所持 {count}匹</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fish.owned === false ? "？？？" : fish.name}</div>
+          <div style={{ fontSize: 12, color: "#9FD9D8", marginTop: 4 }}>
+            {fish.owned === false
+              ? `${fish.minutes}分以上の集中で出会えるかも…`
+              : `${fish.minutes}分以上の集中で獲得 ・ 所持 ${count}匹`}
+          </div>
           <div style={{ fontSize: 11, color: "#7593A8", marginTop: 10 }}>タップで閉じる</div>
         </div>
       </div>
@@ -138,7 +142,7 @@ export function TankTab({ data, update }) {
         )}
         {swimmingFish.map((f) => (
           <div key={`${f.e}-${f.idx}`}
-            onClick={() => setSpotlight(f)}
+            onClick={() => setSpotlight({ ...f, owned: true })}
             style={{
               position: "absolute",
               top: `${12 + (f.idx * 47) % 160}px`,
@@ -169,12 +173,12 @@ export function TankTab({ data, update }) {
             const count = col[f.e] || 0;
             return (
               <div key={f.e}
-                onClick={() => count > 0 && setSpotlight(f)}
+                onClick={() => setSpotlight({ ...f, owned: count > 0 })}
                 style={{
                   textAlign: "center", padding: "8px 4px", borderRadius: 12,
                   background: count > 0 ? "#FFF7E0" : "#F0F5F5",
                   border: `1px solid ${count > 0 ? C.yellow : C.line}`,
-                  cursor: count > 0 ? "pointer" : "default",
+                  cursor: "pointer",
                 }}>
                 <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {count > 0 ? <FishSVG type={f.e} size={38} /> : <span style={{ fontSize: 20, opacity: 0.4 }}>❓</span>}
@@ -192,7 +196,8 @@ export function TankTab({ data, update }) {
 
       {/* ===== 振り返りセクション ===== */}
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 12 }}>🔍 振り返り・メモ</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 4 }}>🔍 振り返り・メモ</div>
+        <div style={{ fontSize: 11, color: C.sub, marginBottom: 12 }}>メモは完了したタスク・達成した目標に書けます</div>
 
         {/* タブ切替 */}
         <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
@@ -228,8 +233,7 @@ export function TankTab({ data, update }) {
                   <div style={{ height: 8, borderRadius: 4, background: "#E4EFEF", overflow: "hidden", marginBottom: 4 }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg,${C.aqua},${C.deepAqua})`, transition: "width .4s" }} />
                   </div>
-                  <div style={{ fontSize: 11, color: C.sub, marginBottom: 6 }}>タスク {done}/{linked.length} 完了（{pct}%）</div>
-                  <MemoField id={g.id} memos={data.memos} update={update} />
+                  <div style={{ fontSize: 11, color: C.sub }}>タスク {done}/{linked.length} 完了（{pct}%）</div>
                 </div>
               );
             })}
@@ -314,7 +318,6 @@ export function TankTab({ data, update }) {
                           </div>
                         </div>
                       </div>
-                      <MemoField id={t.id} memos={data.memos} update={update} />
                     </div>
                   );
                 })}

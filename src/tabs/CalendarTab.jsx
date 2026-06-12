@@ -7,6 +7,7 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(todayStr());
   const [showForm, setShowForm] = useState(false);
+  const [assignId, setAssignId] = useState("");
   const [gcalEvents, setGcalEvents] = useState([]);
   const [gcalSync, setGcalSync] = useState(false);
   const [gcalError, setGcalError] = useState("");
@@ -178,6 +179,25 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
           <TaskForm data={data} update={update} defaultDue={selected} onAdded={() => setShowForm(false)} />
         </div>
       )}
+
+      {/* 既存タスクをこの日に割り振る */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        <select value={assignId} onChange={(e) => setAssignId(e.target.value)}
+          style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.card, fontSize: 12, color: assignId ? C.ink : C.sub }}>
+          <option value="">📌 既存タスクをこの日に割り振る…</option>
+          {data.tasks.filter((t) => !t.done && t.due !== selected).map((t) => (
+            <option key={t.id} value={t.id}>{t.title}{t.due ? `（現在: ${t.due}）` : "（期限なし）"}</option>
+          ))}
+        </select>
+        <button disabled={!assignId}
+          onClick={() => {
+            update((d) => { const x = d.tasks.find((x) => x.id === assignId); if (x) x.due = selected; return d; });
+            setAssignId("");
+          }}
+          style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: assignId ? C.aqua : "#BFDEDE", color: "#fff", fontWeight: 800, fontSize: 12, cursor: assignId ? "pointer" : "default" }}>
+          割り振る
+        </button>
+      </div>
 
       {/* Googleカレンダーのイベント */}
       {selGcal.map((ev) => {

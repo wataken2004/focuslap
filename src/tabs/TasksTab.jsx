@@ -10,6 +10,25 @@ export function TasksTab({ data, update, growthOf, onFocus }) {
   return (
     <div>
       <TaskForm data={data} update={update} />
+
+      {/* 1時間ごとの未完了リマインド */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, padding: "10px 14px", background: C.card, borderRadius: 12, border: `1px solid ${data.settings.hourlyReminder ? C.aqua : C.line}` }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>🔔 忘れ防止リマインド</div>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>未完了タスクがある間、1時間ごとに通知します</div>
+        </div>
+        <button
+          onClick={() => {
+            if (!data.settings.hourlyReminder && "Notification" in window && Notification.permission === "default") {
+              Notification.requestPermission().catch(() => {});
+            }
+            update((d) => { d.settings.hourlyReminder = !d.settings.hourlyReminder; return d; });
+          }}
+          style={{ padding: "7px 14px", borderRadius: 999, border: "none", background: data.settings.hourlyReminder ? C.deepAqua : C.line, color: data.settings.hourlyReminder ? "#fff" : C.sub, fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+          {data.settings.hourlyReminder ? "ON" : "OFF"}
+        </button>
+      </div>
+
       <div style={{ display: "flex", gap: 8, margin: "14px 0 12px" }}>
         {[["open", "未完了"], ["done", "完了"], ["all", "すべて"]].map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)}
