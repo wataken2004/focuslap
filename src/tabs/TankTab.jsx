@@ -99,6 +99,26 @@ export function TankTab({ data, update }) {
     return list;
   }, [col]);
 
+  // 図鑑：獲得済みの魚をグリッドの中央寄りに配置する
+  const dexCells = useMemo(() => {
+    const cols4 = 4;
+    const rows = Math.ceil(FISHES.length / cols4);
+    // 各マスの「グリッド中心からの距離」順（近い順）
+    const order = [...Array(rows * cols4)]
+      .map((_, i) => {
+        const r = Math.floor(i / cols4), c = i % cols4;
+        return { i, d: Math.hypot(r - (rows - 1) / 2, c - (cols4 - 1) / 2) };
+      })
+      .sort((a, b) => a.d - b.d)
+      .map((x) => x.i);
+    const owned = FISHES.filter((f) => (col[f.e] || 0) > 0);
+    const unowned = FISHES.filter((f) => (col[f.e] || 0) === 0);
+    const cells = Array(rows * cols4).fill(null);
+    [...owned, ...unowned].forEach((f, idx) => { cells[order[idx]] = f; });
+    return cells;
+  }, [col]);
+  const ownedKinds = FISHES.filter((f) => (col[f.e] || 0) > 0).length;
+
   // 振り返りデータ
   const completedGoals = data.goals.filter((g) => {
     const linked = data.tasks.filter((t) => t.goalId === g.id);
@@ -163,34 +183,59 @@ export function TankTab({ data, update }) {
         <Stat label="累計集中時間" value={`${Math.floor(totalMin / 60)}時間${totalMin % 60}分`} />
       </div>
 
-      {/* 魚ずかん */}
-      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 12, color: C.sub, fontWeight: 800, marginBottom: 10 }}>
-          📖 魚ずかん — 集中時間が長いほど珍しい魚が獲れます
+      {/* 魚ずかん（水中パネル：獲得した魚は中央に集まる） */}
+      <div style={{ borderRadius: 20, padding: 16, marginBottom: 14, background: "linear-gradient(180deg,#11497A 0%,#0B2C4C 100%)", border: "1px solid #1B4A6E", position: "relative", overflow: "hidden" }}>
+        {/* 飾りの泡 */}
+        <div style={{ position: "absolute", top: -20, right: -20, width: 96, height: 96, borderRadius: 999, background: "rgba(127,214,212,0.08)" }} />
+        <div style={{ position: "absolute", bottom: -28, left: -16, width: 80, height: 80, borderRadius: 999, background: "rgba(127,214,212,0.05)" }} />
+
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, color: "#fff", fontWeight: 800 }}>📖 魚ずかん</div>
+          <div style={{ fontSize: 11, color: "#9FD9D8", fontWeight: 700 }}>{ownedKinds}/{FISHES.length} 種類</div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
-          {FISHES.map((f) => {
+
+        {/* コンプリート進捗 */}
+        <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.12)", overflow: "hidden", marginBottom: 14 }}>
+          <div style={{ width: `${(ownedKinds / FISHES.length) * 100}%`, height: "100%", background: "linear-gradient(90deg,#14A3A1,#7FD6D4)", transition: "width .4s" }} />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, position: "relative" }}>
+          {dexCells.map((f, i) => {
+            if (!f) return <div key={`empty-${i}`} style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)" }} />;
             const count = col[f.e] || 0;
-            return (
-              <div key={f.e}
-                onClick={() => setSpotlight({ ...f, owned: count > 0 })}
+            const owned = count > 0;
+            return owned ? (
+              <div key={f.e} onClick={() => setSpotlight({ ...f, owned: true })}
                 style={{
-                  textAlign: "center", padding: "8px 4px", borderRadius: 12,
-                  background: count > 0 ? "#FFF7E0" : "#F0F5F5",
-                  border: `1px solid ${count > 0 ? C.yellow : C.line}`,
-                  cursor: "pointer",
+                  textAlign: "center", padding: "10px 4px 8px", borderRadius: 14, cursor: "pointer", position: "relative",
+                  background: "radial-gradient(circle at 50% 35%, rgba(127,214,212,0.22), rgba(255,255,255,0.05) 70%)",
+                  border: "1px solid rgba(127,214,212,0.55)",
+                  boxShadow: "0 0 12px rgba(127,214,212,0.25)",
                 }}>
-                <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {count > 0 ? <FishSVG type={f.e} size={38} /> : <span style={{ fontSize: 20, opacity: 0.4 }}>❓</span>}
+                {count > 1 && (
+                  <div style={{ position: "absolute", top: 4, right: 4, fontSize: 9, fontWeight: 800, color: "#0B2C4C", background: "#F5BE3D", borderRadius: 999, padding: "1px 6px" }}>×{count}</div>
+                )}
+                <div style={{ height: 30, display: "flex", alignItems: "center", justifyContent: "center", animation: `bob ${2.2 + (i % 3) * 0.5}s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }}>
+                  <FishSVG type={f.e} size={40} />
                 </div>
-                <div style={{ fontSize: 10, color: count > 0 ? C.ink : C.sub, fontWeight: count > 0 ? 800 : 500 }}>
-                  {count > 0 ? f.name : "???"}
+                <div style={{ fontSize: 9.5, color: "#fff", fontWeight: 800, marginTop: 4 }}>{f.name}</div>
+                <div style={{ fontSize: 8.5, color: "#9FD9D8" }}>{f.minutes}分〜</div>
+              </div>
+            ) : (
+              <div key={f.e} onClick={() => setSpotlight({ ...f, owned: false })}
+                style={{ textAlign: "center", padding: "10px 4px 8px", borderRadius: 14, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                <div style={{ height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <FishSVG type={f.e} size={40} style={{ filter: "grayscale(1) brightness(0) invert(0.42)", opacity: 0.55 }} />
                 </div>
-                {count > 0 && <div style={{ fontSize: 10, color: C.deepAqua, fontWeight: 800 }}>×{count}</div>}
-                <div style={{ fontSize: 9, color: C.sub }}>{f.minutes}分〜</div>
+                <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.45)", fontWeight: 700, marginTop: 4 }}>？？？</div>
+                <div style={{ fontSize: 8.5, color: "rgba(159,217,216,0.5)" }}>{f.minutes}分〜</div>
               </div>
             );
           })}
+        </div>
+
+        <div style={{ fontSize: 10, color: "#7FB3C8", marginTop: 12, textAlign: "center" }}>
+          長く集中するほど珍しい魚に出会えます — タップで観察
         </div>
       </div>
 
