@@ -1,34 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
-import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
-import { listCalendarEvents, createCalendarEvent } from "../googleCalendar.js";
+import { useState, useMemo } from "react";
+import { C, fmt, todayStr, addDays, TaskRow, TaskForm } from "../shared.jsx";
 
-export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken, onRequestCalendarAccess }) {
+export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [view, setView] = useState("month");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(todayStr());
   const [showForm, setShowForm] = useState(false);
   const [assignId, setAssignId] = useState("");
-  const [gcalEvents, setGcalEvents] = useState([]);
-  const [gcalSync, setGcalSync] = useState(false);
-  const [gcalError, setGcalError] = useState("");
 
   const tasksOn = (key) => data.tasks.filter((t) => t.due === key);
-
-  // Googleカレンダー取得
-  useEffect(() => {
-    if (!gcalSync || !googleAccessToken) return;
-    setGcalError("");
-    const from = fmt(addDays(cursor, -31));
-    const to = fmt(addDays(cursor, 31));
-    listCalendarEvents(googleAccessToken, from, to)
-      .then(setGcalEvents)
-      .catch((e) => {
-        setGcalError("カレンダーの取得に失敗しました。再ログインをお試しください。");
-        setGcalSync(false);
-      });
-  }, [gcalSync, googleAccessToken, cursor]);
-
-  const gcalOn = (key) => gcalEvents.filter((e) => e.date === key);
 
   const move = (n) => {
     const c = new Date(cursor);
@@ -57,7 +37,6 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
   const dayCell = (d, compact) => {
     const key = fmt(d);
     const ts = tasksOn(key);
-    const gc = gcalOn(key);
     const isToday = key === todayStr();
     const isSel = key === selected;
     const inMonth = d.getMonth() === cursor.getMonth();
@@ -70,28 +49,16 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
           color: inMonth || compact ? (d.getDay() === 0 ? C.red : d.getDay() === 6 ? "#3A6EA5" : C.ink) : "#B8C9D2",
         }}>
         <div style={{ fontSize: 13, fontWeight: isToday ? 800 : 600 }}>{d.getDate()}</div>
-        <div style={{ fontSize: 10, lineHeight: 1.1, minHeight: 12 }}>
-          {ts.slice(0, 2).map((t) => t.done ? "✓" : "●").join("")}
-          {gc.length > 0 && <span style={{ color: "#4285F4" }}>📅</span>}
-          {ts.length > 2 && "…"}
+        <div style={{ fontSize: 10, lineHeight: 1.1, minHeight: 12, color: C.deepAqua }}>
+          {ts.slice(0, 3).map((t) => (t.done ? "✓" : "●")).join("")}
+          {ts.length > 3 && "…"}
         </div>
       </button>
     );
   };
 
   const selTasks = tasksOn(selected);
-  const selGcal = gcalOn(selected);
   const selDone = selTasks.filter((t) => t.done).length;
-
-  const pushToGcal = async (task) => {
-    if (!googleAccessToken) return;
-    try {
-      await createCalendarEvent(googleAccessToken, { title: task.title, date: task.due || selected });
-      alert("Googleカレンダーに追加しました！");
-    } catch {
-      alert("Googleカレンダーへの追加に失敗しました。");
-    }
-  };
 
   return (
     <div>
@@ -104,30 +71,6 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
           </button>
         ))}
       </div>
-
-      {/* Googleカレンダー同期トグル */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", background: C.card, borderRadius: 12, border: `1px solid ${C.line}` }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.ink, flex: 1 }}>📅 Googleカレンダーと同期</span>
-        {gcalSync ? (
-          <button onClick={() => setGcalSync(false)}
-            style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: C.deepAqua, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-            ON
-          </button>
-        ) : (
-          <button onClick={async () => {
-            if (!googleAccessToken) {
-              const ok = await onRequestCalendarAccess?.();
-              if (ok) setGcalSync(true);
-            } else {
-              setGcalSync(true);
-            }
-          }}
-            style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: C.line, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-            {googleAccessToken ? "OFF" : "連携する"}
-          </button>
-        )}
-      </div>
-      {gcalError && <div style={{ fontSize: 12, color: C.red, marginBottom: 10 }}>{gcalError}</div>}
 
       {/* ナビ */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -157,7 +100,7 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
         )}
         {view === "day" && (
           <div style={{ textAlign: "center", padding: "8px 0", fontSize: 13, color: C.sub }}>
-            {selTasks.length === 0 && selGcal.length === 0 ? "この日の予定はありません" : `タスク ${selDone}/${selTasks.length} 完了`}
+            {selTasks.length === 0 ? "この日のタスクはありません" : `タスク ${selDone}/${selTasks.length} 完了`}
           </div>
         )}
       </div>
@@ -199,52 +142,12 @@ export function CalendarTab({ data, update, growthOf, onFocus, googleAccessToken
         </button>
       </div>
 
-      {/* Googleカレンダーのイベント */}
-      {selGcal.map((ev) => {
-        const alreadyAdded = data.tasks.some((t) => t.title === ev.title && t.due === ev.date);
-        return (
-          <div key={ev.id} style={{ background: "#EEF3FF", border: "1px solid #C5D3F0", borderRadius: 14, padding: "10px 14px", marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 16 }}>📅</span>
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#2A4080" }}>{ev.title}</div>
-              <span style={{ fontSize: 10, color: "#4285F4" }}>Googleカレンダー</span>
-            </div>
-            <div style={{ marginTop: 8, textAlign: "right" }}>
-              {alreadyAdded ? (
-                <span style={{ fontSize: 11, color: C.sub }}>✓ タスクに追加済み</span>
-              ) : (
-                <button
-                  onClick={() => {
-                    update((d) => {
-                      d.tasks.unshift({ id: uid(), title: ev.title, goalId: null, due: ev.date, done: false });
-                      return d;
-                    });
-                  }}
-                  style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                  ＋ タスクに追加
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })}
-
-      {selTasks.length === 0 && selGcal.length === 0 && !showForm && (
-        <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "24px 0" }}>この日の予定はまだありません。</div>
+      {selTasks.length === 0 && !showForm && (
+        <div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "24px 0" }}>この日のタスクはまだありません。</div>
       )}
 
       {selTasks.map((t) => (
-        <div key={t.id}>
-          <TaskRow t={t} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
-          {googleAccessToken && gcalSync && t.due && (
-            <div style={{ textAlign: "right", marginTop: -4, marginBottom: 6 }}>
-              <button onClick={() => pushToGcal(t)}
-                style={{ fontSize: 11, color: "#4285F4", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-                Googleカレンダーにも追加
-              </button>
-            </div>
-          )}
-        </div>
+        <TaskRow key={t.id} t={t} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
       ))}
     </div>
   );

@@ -3,7 +3,7 @@
 ## プロジェクト概要
 
 集中すると魚が増えるポモドーロ式タスク管理PWA（React + Vite）。
-Firebase Auth で Googleログイン、Firestore でユーザーごとにデータ保存。
+Firebase Auth で Google / メール+パスワード ログイン、Firestore でユーザーごとにデータ保存。
 Firebase 未設定時はゲストモード（localStorage）でも動作する。
 本番は Vercel（main への push で自動デプロイ）: https://focuslap-iggi.vercel.app
 
@@ -33,12 +33,11 @@ src/
   fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント）
   icons.jsx             # タブナビ用の海テイスト線画アイコン5種
   push.js               # Web Push購読（enablePush / disablePush）
-  googleCalendar.js     # Google Calendar REST API ラッパー
-  auth/LoginScreen.jsx  # Googleログイン / ゲスト選択画面
+  auth/LoginScreen.jsx  # Google / メール+パスワード ログイン・新規登録・再設定 / ゲスト選択
   tabs/
     FocusTab.jsx        # タイマー・魚獲得演出・離脱判定・手動記録・各モード設定
     TasksTab.jsx        # タスク一覧・リマインド/プッシュ通知トグル
-    CalendarTab.jsx     # 月/週/日カレンダー・既存タスク割り振り・Google同期
+    CalendarTab.jsx     # 月/週/日カレンダー・既存タスク割り振り
     GoalsTab.jsx        # 長期目標・仕事プロジェクト・目標別の集中時間/魚集計
     TankTab.jsx         # 水槽・魚図鑑（中央配置）・スポットライト・完了タスクの振り返りメモ
 public/
@@ -197,6 +196,5 @@ VITE_VAPID_PUBLIC_KEY   # Web Push用（npx web-push generate-vapid-keys）
 - `git push origin main` → Vercelが自動デプロイ
 - アイコン変更時は `node scripts/make-icons.mjs` でPNGも再生成してコミット
 - Firestoreルールは本番設定済み（無期限）。OAuth同意画面は本番公開済み
-  （カレンダーのsensitiveスコープのみ未審査警告が出る）
-- Google Calendar 連携はカレンダータブの「連携する」で都度スコープ要求
-  （ログイン時には要求しない＝審査警告を避けるため）
+- Firebase Auth は Google と メール/パスワード の2プロバイダを有効化済み
+- Google Calendar 連携は廃止済み（googleCalendar.js は削除した）

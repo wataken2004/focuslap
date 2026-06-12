@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "./firebase.js";
 import { loadUserData, saveUserData } from "./storage.js";
 import { C, todayStr } from "./shared.jsx";
@@ -41,7 +41,6 @@ const HELP = {
   cal: [
     "月・週・日を切り替えて、日付をタップするとその日のタスクと予定が見えます",
     "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクの期限をその日に変更できます",
-    "Googleカレンダー同期をONにすると予定が表示され、「＋タスクに追加」でそのままタスク化できます",
   ],
   goals: [
     "🎯目標 / 💼仕事を追加し、タスクを紐付けて進捗バーで管理します",
@@ -223,7 +222,6 @@ function SettingsSheet({ user, data, update, onClose }) {
 export default function FocusLapApp() {
   const [user, setUser] = useState(undefined);         // undefined = 読み込み中
   const [guestMode, setGuestMode] = useState(false);
-  const [googleAccessToken, setGoogleAccessToken] = useState(null);
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("focus");
   const [focusTaskId, setFocusTaskId] = useState("");
@@ -243,17 +241,7 @@ export default function FocusLapApp() {
       setUser(null);
       return;
     }
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      // Google のアクセストークンを取得してカレンダー連携に使う
-      if (u) {
-        // アクセストークンはログイン時のみ取れるため sessionStorage にキャッシュ
-        const cached = sessionStorage.getItem("focuslap:gat");
-        if (cached) setGoogleAccessToken(cached);
-      } else {
-        setGoogleAccessToken(null);
-      }
-    });
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return unsub;
   }, []);
 
@@ -332,13 +320,7 @@ export default function FocusLapApp() {
   // ── 未ログイン かつ ゲストモードでもない ──
   if (!user && !guestMode) {
     return (
-      <LoginScreen
-        onGuestLogin={() => setGuestMode(true)}
-        onGoogleToken={(token) => {
-          sessionStorage.setItem("focuslap:gat", token);
-          setGoogleAccessToken(token);
-        }}
-      />
+      <LoginScreen onGuestLogin={() => setGuestMode(true)} />
     );
   }
 
@@ -354,24 +336,6 @@ export default function FocusLapApp() {
   const update = (fn) => setData((d) => fn(structuredClone(d)));
   const growthOf = (taskId) => data.sessions.filter((s) => s.taskId === taskId).length;
   const goFocus = (id) => { setFocusTaskId(id); setTab("focus"); };
-
-  // カレンダー同期用にGoogleカレンダーのスコープを追加で要求
-  const requestCalendarAccess = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope("https://www.googleapis.com/auth/calendar.events");
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        sessionStorage.setItem("focuslap:gat", credential.accessToken);
-        setGoogleAccessToken(credential.accessToken);
-        return true;
-      }
-    } catch (e) {
-      console.error("Calendar auth failed", e);
-    }
-    return false;
-  };
 
   const titles = { focus: "集中する", tasks: "タスク", cal: "カレンダー", goals: "目標・仕事", tank: "水槽" };
 
@@ -444,7 +408,7 @@ export default function FocusLapApp() {
           <FocusTab data={data} update={update} growthOf={growthOf} taskId={focusTaskId} setTaskId={setFocusTaskId} />
         )}
         {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} uid={user?.uid} />}
-        {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} googleAccessToken={googleAccessToken} onRequestCalendarAccess={requestCalendarAccess} />}
+        {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
         {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
         {tab === "tank"  && <TankTab data={data} update={update} />}
       </main>

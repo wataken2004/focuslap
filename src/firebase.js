@@ -20,7 +20,6 @@ if (isFirebaseConfigured) {
   auth = getAuth(app);
   db = getFirestore(app);
   googleProvider = new GoogleAuthProvider();
-  // カレンダースコープはログイン時には要求しない（CalendarTabで個別に要求）
 }
 
 export { auth, db, googleProvider };
