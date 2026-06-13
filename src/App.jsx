@@ -34,7 +34,7 @@ const HELP = {
   tasks: [
     "①タスク名だけで追加OK。期限・開始時刻・目標との紐付けは任意です",
     "開始時刻を設定すると、その5分前に通知が届きます",
-    "🔔期限リマインドONで、期限が今日・または過ぎた未完了タスクを1日1回お知らせ（朝の時間帯）",
+    "🔔期限リマインドONで、期限が今日・または過ぎた未完了タスクを1時間ごとにお知らせ（8〜22時）",
     "📲プッシュ通知を有効にすると、アプリを閉じていても通知が届きます",
     "🔁繰り返し（毎日/毎週/隔週/毎月/隔月）が設定可能。最終日を指定するとカレンダーに全回分が並び、未指定なら完了するたび次回分が作られます",
     "✎ボタンでタスク名・期限・開始時刻・繰り返し・紐付けを後から編集できます",
@@ -205,7 +205,7 @@ function SettingsSheet({ user, data, update, onClose }) {
         <div style={{ ...row, borderBottom: "none" }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🔔 期限リマインド</div>
-            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1日1回通知</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1時間ごとに通知（8〜22時）</div>
           </div>
           {toggleBtn(data.settings.hourlyReminder, () => {
             if (!data.settings.hourlyReminder && "Notification" in window && Notification.permission === "default") {
@@ -275,14 +275,14 @@ export default function FocusLapApp() {
           appNotify(`⏰ まもなく開始：${t.title}（${t.startTime}〜）`);
         }
       });
-      // 期限リマインド：期限が今日or過去の未完了タスクを1日1回だけ通知（8〜21時）
-      if (data.settings.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 21 * 60) {
-        const key = `focuslap:duer:${today}`;
-        if (!localStorage.getItem(key)) {
+      // 期限リマインド：期限が今日or過去の未完了タスクを1時間ごとに通知（8〜22時）
+      if (data.settings.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 22 * 60) {
+        const last = +localStorage.getItem("focuslap:lastDueReminder") || 0;
+        if (Date.now() - last >= 3600000) {
           const dueToday = data.tasks.filter((t) => !t.done && t.due === today);
           const overdue = data.tasks.filter((t) => !t.done && t.due && t.due < today);
           if (dueToday.length + overdue.length > 0) {
-            localStorage.setItem(key, "1");
+            localStorage.setItem("focuslap:lastDueReminder", String(Date.now()));
             if (dueToday.length + overdue.length === 1) {
               const t = dueToday[0] || overdue[0];
               appNotify(dueToday.length ? `📅 今日が期限：${t.title}` : `⚠️ 期限超過：${t.title}（${t.due}）`);

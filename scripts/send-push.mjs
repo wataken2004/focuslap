@@ -38,6 +38,7 @@ for (const userRef of userRefs) {
     const stateRef = userRef.collection("pushMeta").doc("state");
     const state = (await stateRef.get()).data() || {};
     const sent = state.sent || {};
+    let lastDue = state.lastDue || 0;
     const messages = [];
 
     // ① 開始予定時刻の通知（10分前〜定刻の間に1回だけ）
@@ -52,25 +53,22 @@ for (const userRef of userRefs) {
       }
     }
 
-    // ② 期限リマインド：期限が今日or過去の未完了タスクを1日1回だけ（8〜21時JST）
-    if (d.settings?.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 21 * 60) {
-      const dueKey = `duer:${today}`;
-      if (!sent[dueKey]) {
-        const dueToday = tasks.filter((t) => !t.done && t.due === today);
-        const overdue = tasks.filter((t) => !t.done && t.due && t.due < today);
-        if (dueToday.length + overdue.length > 0) {
-          sent[dueKey] = true;
-          if (dueToday.length + overdue.length === 1) {
-            const t = dueToday[0] || overdue[0];
-            messages.push(dueToday.length
-              ? { title: "📅 今日が期限", body: t.title }
-              : { title: "⚠️ 期限超過", body: `${t.title}（${t.due}）` });
-          } else {
-            const parts = [];
-            if (dueToday.length) parts.push(`今日が期限${dueToday.length}件`);
-            if (overdue.length) parts.push(`期限超過${overdue.length}件`);
-            messages.push({ title: "📝 未完了のタスク", body: parts.join("・") });
-          }
+    // ② 期限リマインド：期限が今日or過去の未完了タスクを1時間ごと（8〜22時JST）
+    if (d.settings?.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 22 * 60 && Date.now() - lastDue >= 3600000) {
+      const dueToday = tasks.filter((t) => !t.done && t.due === today);
+      const overdue = tasks.filter((t) => !t.done && t.due && t.due < today);
+      if (dueToday.length + overdue.length > 0) {
+        lastDue = Date.now();
+        if (dueToday.length + overdue.length === 1) {
+          const t = dueToday[0] || overdue[0];
+          messages.push(dueToday.length
+            ? { title: "📅 今日が期限", body: t.title }
+            : { title: "⚠️ 期限超過", body: `${t.title}（${t.due}）` });
+        } else {
+          const parts = [];
+          if (dueToday.length) parts.push(`今日が期限${dueToday.length}件`);
+          if (overdue.length) parts.push(`期限超過${overdue.length}件`);
+          messages.push({ title: "📝 未完了のタスク", body: parts.join("・") });
         }
       }
     }
@@ -93,7 +91,7 @@ for (const userRef of userRefs) {
       if (k.startsWith(today)) pruned[k] = true;
       else if (k.startsWith("end:") && Date.now() - (+k.slice(4) || 0) < 86400000) pruned[k] = true;
     }
-    await stateRef.set({ sent: pruned });
+    await stateRef.set({ sent: pruned, lastDue });
 
     // 全端末に送信（無効になった購読は削除）
     for (const subDoc of subsSnap.docs) {

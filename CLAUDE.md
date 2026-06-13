@@ -64,7 +64,7 @@ scripts/
     work: number; rest: number;
     phoneMode: boolean;       // 他アプリ使用中も魚が逃げない
     autoRepeat: boolean;      // 休憩後に自動で次の集中を開始
-    hourlyReminder: boolean;  // 期限リマインド（期限が今日/過去の未完了を1日1回通知）
+    hourlyReminder: boolean;  // 期限リマインド（期限が今日/過去の未完了を1時間ごと通知）
     timerKind: "timer" | "stopwatch";  // ポモドーロ / カウントアップ計測
   }
   collection: { [fishEmoji: string]: number }  // 魚ごとの獲得数
@@ -103,8 +103,9 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - 完了時の自動生成は `x.repeat && !x.repeatGroup` のときのみ（repeatUntilがあれば次回dateがそれを超えたら停止）
 
 ### 通知（期限リマインド）
-- `settings.hourlyReminder` ON時、期限が今日or過去の未完了タスクを**1日1回**通知（アプリ内は8〜21時／push同様）
-- 旧「未完了N件を1時間ごと」方式は廃止。送信済みフラグは `focuslap:duer:{today}` / pushは `duer:{today}`
+- `settings.hourlyReminder` ON時、期限が今日or過去の未完了タスクを**1時間ごと**通知（8〜22時）
+- 旧「未完了N件すべて」を対象にする方式は廃止し、期限ベースに絞った
+- throttleはタイムスタンプ：アプリ内 `focuslap:lastDueReminder` / pushは `pushMeta/state.lastDue`
 
 ### アーカイブの仕組み
 - `shared.jsx: TaskRow` のチェックON時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）。
