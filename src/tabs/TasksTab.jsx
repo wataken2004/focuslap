@@ -31,11 +31,11 @@ export function TasksTab({ data, update, growthOf, onFocus, uid }) {
     <div>
       <TaskForm data={data} update={update} />
 
-      {/* 1時間ごとの未完了リマインド */}
+      {/* 期限リマインド */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, padding: "10px 14px", background: C.card, borderRadius: 12, border: `1px solid ${data.settings.hourlyReminder ? C.aqua : C.line}` }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>🔔 忘れ防止リマインド</div>
-          <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>未完了タスクがある間、1時間ごとに通知します</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>🔔 期限リマインド</div>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1日1回通知</div>
         </div>
         <button
           onClick={() => {

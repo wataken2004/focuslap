@@ -34,9 +34,9 @@ const HELP = {
   tasks: [
     "①タスク名だけで追加OK。期限・開始時刻・目標との紐付けは任意です",
     "開始時刻を設定すると、その5分前に通知が届きます",
-    "🔔忘れ防止リマインドONで、未完了タスクがある間1時間ごとにお知らせ（8〜22時）",
+    "🔔期限リマインドONで、期限が今日・または過ぎた未完了タスクを1日1回お知らせ（朝の時間帯）",
     "📲プッシュ通知を有効にすると、アプリを閉じていても通知が届きます",
-    "🔁繰り返し（毎日/毎週/隔週/毎月/隔月）を設定すると、完了した時に次回分が自動で作られます",
+    "🔁繰り返し（毎日/毎週/隔週/毎月/隔月）が設定可能。最終日を指定するとカレンダーに全回分が並び、未指定なら完了するたび次回分が作られます",
     "✎ボタンでタスク名・期限・開始時刻・繰り返し・紐付けを後から編集できます",
     "各タスクの⏱ボタンでそのタスクの集中をすぐ開始。×は確認してから削除されます",
   ],
@@ -45,6 +45,7 @@ const HELP = {
     "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクの期限をその日に変更できます",
     "割り振りは「移動」と「コピー」を選べます。コピーなら同じタスクを複数の日に別々の時刻で置けます",
     "割り振るときに開始時刻も設定でき、その5分前に通知が届きます",
+    "タスク追加時に繰り返し＋最終日を設定すると、その期間の予定がカレンダーに全部並びます",
   ],
   goals: [
     "🎯目標 / 💼仕事を追加し、タスクを紐付けて進捗バーで管理します",
@@ -200,11 +201,11 @@ function SettingsSheet({ user, data, update, onClose }) {
           {user && toggleBtn(pushOn, togglePush, busy)}
         </div>
 
-        {/* 1時間ごとリマインド */}
+        {/* 期限リマインド */}
         <div style={{ ...row, borderBottom: "none" }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🔔 忘れ防止リマインド</div>
-            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>未完了タスクがある間、1時間ごとに通知（8時〜22時）</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🔔 期限リマインド</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1日1回通知</div>
           </div>
           {toggleBtn(data.settings.hourlyReminder, () => {
             if (!data.settings.hourlyReminder && "Notification" in window && Notification.permission === "default") {
@@ -256,7 +257,7 @@ export default function FocusLapApp() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
-  // 通知スケジューラ：開始時刻5分前の通知＆1時間ごとの未完了リマインド
+  // 通知スケジューラ：開始時刻5分前の通知＆期限リマインド（1日1回）
   useEffect(() => {
     if (!data) return;
     const tick = () => {
@@ -274,13 +275,24 @@ export default function FocusLapApp() {
           appNotify(`⏰ まもなく開始：${t.title}（${t.startTime}〜）`);
         }
       });
-      // 1時間ごとの未完了リマインド
-      if (data.settings.hourlyReminder) {
-        const open = data.tasks.filter((t) => !t.done).length;
-        const last = +localStorage.getItem("focuslap:lastHourly") || 0;
-        if (open > 0 && Date.now() - last >= 3600000) {
-          localStorage.setItem("focuslap:lastHourly", String(Date.now()));
-          appNotify(`📝 未完了のタスクが${open}件あります`);
+      // 期限リマインド：期限が今日or過去の未完了タスクを1日1回だけ通知（8〜21時）
+      if (data.settings.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 21 * 60) {
+        const key = `focuslap:duer:${today}`;
+        if (!localStorage.getItem(key)) {
+          const dueToday = data.tasks.filter((t) => !t.done && t.due === today);
+          const overdue = data.tasks.filter((t) => !t.done && t.due && t.due < today);
+          if (dueToday.length + overdue.length > 0) {
+            localStorage.setItem(key, "1");
+            if (dueToday.length + overdue.length === 1) {
+              const t = dueToday[0] || overdue[0];
+              appNotify(dueToday.length ? `📅 今日が期限：${t.title}` : `⚠️ 期限超過：${t.title}（${t.due}）`);
+            } else {
+              const parts = [];
+              if (dueToday.length) parts.push(`今日が期限${dueToday.length}件`);
+              if (overdue.length) parts.push(`期限超過${overdue.length}件`);
+              appNotify(`📝 未完了のタスク：${parts.join("・")}`);
+            }
+          }
         }
       }
     };

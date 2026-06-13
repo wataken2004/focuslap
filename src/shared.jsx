@@ -55,6 +55,19 @@ export const nextRepeatDate = (dueStr, repeat) => {
   return fmt(d);
 };
 
+/** 開始日〜最終日(until)までの繰り返し日付を全て返す（上限370件で暴走防止） */
+export const repeatDates = (startStr, repeat, untilStr) => {
+  const dates = [];
+  let cur = startStr;
+  let guard = 0;
+  while (cur <= untilStr && guard < 370) {
+    dates.push(cur);
+    cur = nextRepeatDate(cur, repeat);
+    guard++;
+  }
+  return dates;
+};
+
 /* ---------- タスクの成長ステージ（セッション回数） ---------- */
 export const stageOf = (g) =>
   g === 0  ? { label: "たまご",   size: 0  } :
@@ -70,6 +83,7 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
   const [due, setDue] = useState(defaultDue);
   const [startTime, setStartTime] = useState("");
   const [repeat, setRepeat] = useState("");
+  const [repeatUntil, setRepeatUntil] = useState("");
 
   useEffect(() => setDue(defaultDue), [defaultDue]);
 
@@ -86,20 +100,34 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
 
   const add = () => {
     if (!title.trim()) return;
+    const base = due || (repeat ? todayStr() : null);
     update((d) => {
-      d.tasks.unshift({
-        id: uid(), title: title.trim(), goalId: goalId || null,
-        // 繰り返し指定があるのに期限が無い場合は今日を基準にする
-        due: due || (repeat ? todayStr() : null),
-        startTime: startTime || null,
-        repeat: repeat || null,
-        done: false,
-      });
+      if (repeat && repeatUntil && base && repeatUntil >= base) {
+        // 繰り返し＋最終日：期間中の全回分を事前生成してカレンダーに並べる
+        const group = uid();
+        repeatDates(base, repeat, repeatUntil).forEach((dt) => {
+          d.tasks.push({
+            id: uid(), title: title.trim(), goalId: goalId || null,
+            due: dt, startTime: startTime || null,
+            repeat, repeatUntil, repeatGroup: group, done: false,
+          });
+        });
+      } else {
+        // 単発、または最終日なしの繰り返し（完了すると次回分を自動追加）
+        d.tasks.unshift({
+          id: uid(), title: title.trim(), goalId: goalId || null,
+          due: base,
+          startTime: startTime || null,
+          repeat: repeat || null,
+          done: false,
+        });
+      }
       return d;
     });
     setTitle("");
     setStartTime("");
     setRepeat("");
+    setRepeatUntil("");
     onAdded?.();
   };
 
@@ -153,8 +181,22 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
         ))}
       </div>
       {repeat && (
-        <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>
-          🔁 完了すると次回分（{REPEATS[repeat]}）が自動で追加されます
+        <div style={{ marginTop: 8 }}>
+          <label style={{ fontSize: 11, color: C.sub, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            いつまで繰り返す？（最終日）
+            <input type="date" value={repeatUntil} min={due || todayStr()}
+              onChange={(e) => setRepeatUntil(e.target.value)}
+              style={{ padding: "7px 8px", borderRadius: 8, border: `1px solid ${C.line}`, fontSize: 12 }} />
+            {repeatUntil && (
+              <button onClick={() => setRepeatUntil("")}
+                style={{ padding: "6px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 11, cursor: "pointer" }}>クリア</button>
+            )}
+          </label>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>
+            {repeatUntil
+              ? `🔁 ${REPEATS[repeat]}で最終日まで予定をカレンダーに入れます（${repeatDates(due || todayStr(), repeat, repeatUntil).length}回）`
+              : `🔁 最終日なし：完了するたびに次回分（${REPEATS[repeat]}）が自動で追加されます`}
+          </div>
         </div>
       )}
 
@@ -285,16 +327,19 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
               sessions: sess.length,
               fish: sess.length ? sess[sess.length - 1].fish : null,
             });
-            // 繰り返しタスク：次回分を自動作成
-            if (x.repeat) {
-              const newId = uid();
-              d.tasks.push({
-                id: newId, title: x.title, goalId: x.goalId,
-                due: nextRepeatDate(x.due, x.repeat),
-                startTime: x.startTime ?? null,
-                repeat: x.repeat, note: x.note, done: false,
-              });
-              x.nextId = newId;
+            // 繰り返しタスク：最終日なしの単発繰り返しのみ、完了時に次回分を自動作成
+            // （repeatGroup付き＝最終日まで事前生成済みなので何もしない）
+            if (x.repeat && !x.repeatGroup) {
+              const next = nextRepeatDate(x.due, x.repeat);
+              if (!x.repeatUntil || next <= x.repeatUntil) {
+                const newId = uid();
+                d.tasks.push({
+                  id: newId, title: x.title, goalId: x.goalId,
+                  due: next, startTime: x.startTime ?? null,
+                  repeat: x.repeat, repeatUntil: x.repeatUntil ?? null, note: x.note, done: false,
+                });
+                x.nextId = newId;
+              }
             }
           } else if (x.nextId) {
             // チェックを外したら、自動作成した次回分を取り消す（未着手の場合のみ）

@@ -64,7 +64,7 @@ scripts/
     work: number; rest: number;
     phoneMode: boolean;       // 他アプリ使用中も魚が逃げない
     autoRepeat: boolean;      // 休憩後に自動で次の集中を開始
-    hourlyReminder: boolean;  // 未完了タスクの1時間ごと通知
+    hourlyReminder: boolean;  // 期限リマインド（期限が今日/過去の未完了を1日1回通知）
     timerKind: "timer" | "stopwatch";  // ポモドーロ / カウントアップ計測
   }
   collection: { [fishEmoji: string]: number }  // 魚ごとの獲得数
@@ -81,7 +81,9 @@ Goal    = { id, title, date: string|null, type: "goal"|"work" }
 Task    = { id, title, goalId: string|null, due: string|null,
             startTime: string|null /* "HH:MM" */, done: boolean, note?: string,
             repeat?: "daily"|"weekly"|"biweekly"|"monthly"|"bimonthly"|null,
-            nextId?: string /* repeatで自動作成した次回分のid（チェック取消時の掃除用） */ }
+            repeatUntil?: string|null /* 繰り返しの最終日（事前生成の終端） */,
+            repeatGroup?: string /* 事前生成された系列の共通id（完了時に次回生成しない目印） */,
+            nextId?: string /* 最終日なし繰り返しで自動作成した次回分のid（チェック取消時の掃除用） */ }
 Session = { date: string, minutes: number, taskId: string|null, fish: string,
             manual?: true /* あとから記録 */, stopwatch?: true /* ストップウォッチ計測 */ }
 ```
@@ -95,8 +97,14 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 既存完了タスクのarchiveバックフィルを行う。**新フィールド追加時は必ずここに追記する。**
 
 ### 繰り返しタスク
-- `shared.jsx: REPEATS / nextRepeatDate()`。完了チェック時に次回分タスクを自動生成（dueを周期分進める。月またぎは月末に丸める）
-- 完了側に `nextId` を記録し、チェックを外したら未着手の次回分を削除して取り消す
+- `shared.jsx: REPEATS / nextRepeatDate() / repeatDates()`。月またぎは月末に丸める
+- **最終日あり**：`repeatDates()` で初回〜最終日の全回分を事前生成（`repeatGroup`付き）。カレンダーに全部並ぶ。完了しても増殖しない
+- **最終日なし**：従来の「完了したら次回1件を生成」方式。完了側に `nextId` を記録し、チェック取消で未着手の次回分を削除
+- 完了時の自動生成は `x.repeat && !x.repeatGroup` のときのみ（repeatUntilがあれば次回dateがそれを超えたら停止）
+
+### 通知（期限リマインド）
+- `settings.hourlyReminder` ON時、期限が今日or過去の未完了タスクを**1日1回**通知（アプリ内は8〜21時／push同様）
+- 旧「未完了N件を1時間ごと」方式は廃止。送信済みフラグは `focuslap:duer:{today}` / pushは `duer:{today}`
 
 ### アーカイブの仕組み
 - `shared.jsx: TaskRow` のチェックON時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）。
