@@ -37,7 +37,7 @@ src/
   tabs/
     FocusTab.jsx        # タイマー・魚獲得演出・離脱判定・手動記録・各モード設定
     TasksTab.jsx        # タスク一覧・リマインド/プッシュ通知トグル
-    CalendarTab.jsx     # 月/週/日カレンダー・既存タスク割り振り
+    CalendarTab.jsx     # 月/週/日カレンダー・既存タスク割り振り（移動/コピー）
     GoalsTab.jsx        # 長期目標・仕事プロジェクト・目標別の集中時間/魚集計
     TankTab.jsx         # 水槽・魚図鑑（中央配置）・スポットライト・完了タスクの振り返りメモ
 public/
@@ -90,7 +90,7 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 
 その他のFirestoreコレクション：
 - `users/{uid}/push/{key}` — Web Push購読情報（subのJSON文字列）
-- `users/{uid}/pushMeta/state` — 送信済みキー（重複防止）と lastHourly
+- `users/{uid}/pushMeta/state` — 送信済みキー sent（重複防止）と lastDue（期限リマインドのthrottle）
 
 ### マイグレーション
 `App.jsx: migrateData()` がロード時に旧形式変換・新フィールド補完・escapesの日次リセット・
@@ -106,6 +106,11 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - `settings.hourlyReminder` ON時、期限が今日or過去の未完了タスクを**1時間ごと**通知（8〜22時）
 - 旧「未完了N件すべて」を対象にする方式は廃止し、期限ベースに絞った
 - throttleはタイムスタンプ：アプリ内 `focuslap:lastDueReminder` / pushは `pushMeta/state.lastDue`
+
+### カレンダーの既存タスク割り振り（CalendarTab）
+- 選択日のプルダウンから既存タスクを「**この日へ移動**」（dueを変更）or「**＋この日にコピー**」（同タスクを複製して別日にも配置）
+- プルダウンは `assignableTasks` で**同名タスクを1件に重複排除**（過去のコピーで増えても選択肢は膨らまない）
+- 割り振り時にstartTimeは設定しない（コピーは `startTime: null`）。時刻はTaskRowの✎編集で後から設定する方針
 
 ### アーカイブの仕組み
 - `shared.jsx: TaskRow` のチェックON時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）。
