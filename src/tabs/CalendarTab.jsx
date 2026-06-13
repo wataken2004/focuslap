@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, fmt, todayStr, addDays, TaskRow, TaskForm } from "../shared.jsx";
+import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
 
 export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [view, setView] = useState("month");
@@ -59,6 +59,16 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
 
   const selTasks = tasksOn(selected);
   const selDone = selTasks.filter((t) => t.done).length;
+
+  // 割り振り候補：未完了かつこの日以外。同名タスクは1つにまとめて重複表示を防ぐ
+  const assignableTasks = useMemo(() => {
+    const seen = new Set();
+    return data.tasks.filter((t) => {
+      if (t.done || t.due === selected || seen.has(t.title)) return false;
+      seen.add(t.title);
+      return true;
+    });
+  }, [data.tasks, selected]);
 
   return (
     <div>
@@ -123,23 +133,47 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
         </div>
       )}
 
-      {/* 既存タスクをこの日に割り振る（その日へ移動するだけ） */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+      {/* 既存タスクをこの日に割り振る（移動 or 別日にコピー。同名は1つにまとめて表示） */}
+      <div style={{ background: C.card, border: `1px solid ${assignId ? C.aqua : C.line}`, borderRadius: 12, padding: 10, marginBottom: 12 }}>
         <select value={assignId} onChange={(e) => setAssignId(e.target.value)}
-          style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, border: `1px solid ${assignId ? C.aqua : C.line}`, background: C.card, fontSize: 12, color: assignId ? C.ink : C.sub }}>
+          style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", fontSize: 12, color: assignId ? C.ink : C.sub }}>
           <option value="">📌 既存タスクをこの日（{selected.slice(5).replace("-", "/")}）に割り振る…</option>
-          {data.tasks.filter((t) => !t.done && t.due !== selected).map((t) => (
+          {assignableTasks.map((t) => (
             <option key={t.id} value={t.id}>{t.title}{t.due ? `（現在: ${t.due}）` : "（期限なし）"}</option>
           ))}
         </select>
-        <button disabled={!assignId}
-          onClick={() => {
-            update((d) => { const x = d.tasks.find((x) => x.id === assignId); if (x) x.due = selected; return d; });
-            setAssignId("");
-          }}
-          style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: assignId ? C.aqua : "#BFDEDE", color: "#fff", fontWeight: 800, fontSize: 12, cursor: assignId ? "pointer" : "default" }}>
-          割り振る
-        </button>
+
+        {assignId && (
+          <>
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <button
+                onClick={() => {
+                  // 移動：この日へ動かすだけ（増えない）
+                  update((d) => { const x = d.tasks.find((x) => x.id === assignId); if (x) x.due = selected; return d; });
+                  setAssignId("");
+                }}
+                style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1px solid ${C.deepAqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                この日へ移動
+              </button>
+              <button
+                onClick={() => {
+                  // コピー：元はそのまま、この日にも同じタスクを追加
+                  update((d) => {
+                    const x = d.tasks.find((x) => x.id === assignId);
+                    if (x) d.tasks.unshift({ id: uid(), title: x.title, goalId: x.goalId, due: selected, startTime: null, note: x.note, done: false });
+                    return d;
+                  });
+                  setAssignId("");
+                }}
+                style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                ＋ この日にコピー
+              </button>
+            </div>
+            <div style={{ fontSize: 10, color: C.sub, marginTop: 6 }}>
+              移動＝予定をこの日へ動かす ／ コピー＝元の日は残してこの日にも置く。開始時刻は割り振り後に✎編集で設定できます
+            </div>
+          </>
+        )}
       </div>
 
       {selTasks.length === 0 && !showForm && (
