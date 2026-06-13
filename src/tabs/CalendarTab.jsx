@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
+import { C, fmt, todayStr, addDays, TaskRow, TaskForm } from "../shared.jsx";
 
 export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [view, setView] = useState("month");
@@ -7,7 +7,6 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [selected, setSelected] = useState(todayStr());
   const [showForm, setShowForm] = useState(false);
   const [assignId, setAssignId] = useState("");
-  const [assignTime, setAssignTime] = useState("");
 
   const tasksOn = (key) => data.tasks.filter((t) => t.due === key);
 
@@ -124,83 +123,23 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
         </div>
       )}
 
-      {/* 既存タスクをこの日に割り振る（開始時刻も設定可能） */}
-      <div style={{ background: C.card, border: `1px solid ${assignId ? C.aqua : C.line}`, borderRadius: 12, padding: 10, marginBottom: 12 }}>
-        <select value={assignId}
-          onChange={(e) => {
-            const id = e.target.value;
-            setAssignId(id);
-            const t = data.tasks.find((x) => x.id === id);
-            setAssignTime(t?.startTime || "");
-          }}
-          style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", fontSize: 12, color: assignId ? C.ink : C.sub }}>
+      {/* 既存タスクをこの日に割り振る（その日へ移動するだけ） */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        <select value={assignId} onChange={(e) => setAssignId(e.target.value)}
+          style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, border: `1px solid ${assignId ? C.aqua : C.line}`, background: C.card, fontSize: 12, color: assignId ? C.ink : C.sub }}>
           <option value="">📌 既存タスクをこの日（{selected.slice(5).replace("-", "/")}）に割り振る…</option>
           {data.tasks.filter((t) => !t.done && t.due !== selected).map((t) => (
             <option key={t.id} value={t.id}>{t.title}{t.due ? `（現在: ${t.due}）` : "（期限なし）"}</option>
           ))}
         </select>
-
-        {assignId && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            <label style={{ fontSize: 11, color: C.sub }}>
-              開始時刻（任意・5分前に通知）
-              <input type="time" value={assignTime}
-                onChange={(e) => {
-                  setAssignTime(e.target.value);
-                  if (e.target.value && "Notification" in window && Notification.permission === "default") {
-                    Notification.requestPermission().catch(() => {});
-                  }
-                }}
-                style={{ marginLeft: 6, padding: "7px 8px", borderRadius: 8, border: `1px solid ${C.line}`, fontSize: 12 }} />
-            </label>
-            {assignTime && (
-              <button onClick={() => setAssignTime("")}
-                style={{ padding: "6px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 11, cursor: "pointer" }}>クリア</button>
-            )}
-            <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
-              <button
-                onClick={() => {
-                  // 移動：元の日から外してこの日へ
-                  update((d) => {
-                    const x = d.tasks.find((x) => x.id === assignId);
-                    if (x) { x.due = selected; x.startTime = assignTime || null; }
-                    return d;
-                  });
-                  setAssignId("");
-                  setAssignTime("");
-                }}
-                style={{ padding: "9px 14px", borderRadius: 10, border: `1px solid ${C.deepAqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
-                移動
-              </button>
-              <button
-                onClick={() => {
-                  // コピー：元のタスクは残したまま、この日に同じタスクを追加（時刻は別々に設定可）
-                  update((d) => {
-                    const x = d.tasks.find((x) => x.id === assignId);
-                    if (x) {
-                      d.tasks.unshift({
-                        id: uid(), title: x.title, goalId: x.goalId,
-                        due: selected, startTime: assignTime || null,
-                        note: x.note, done: false,
-                      });
-                    }
-                    return d;
-                  });
-                  setAssignId("");
-                  setAssignTime("");
-                }}
-                style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
-                ＋ コピーを追加
-              </button>
-            </div>
-          </div>
-        )}
-
-        {assignId && (
-          <div style={{ fontSize: 10, color: C.sub, marginTop: 6 }}>
-            移動＝元の日から外してこの日へ ／ コピー＝元の日にも残したまま、この日にも追加（例：リスニングを15日14時と18日18時の両方に置ける）
-          </div>
-        )}
+        <button disabled={!assignId}
+          onClick={() => {
+            update((d) => { const x = d.tasks.find((x) => x.id === assignId); if (x) x.due = selected; return d; });
+            setAssignId("");
+          }}
+          style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: assignId ? C.aqua : "#BFDEDE", color: "#fff", fontWeight: 800, fontSize: 12, cursor: assignId ? "pointer" : "default" }}>
+          割り振る
+        </button>
       </div>
 
       {selTasks.length === 0 && !showForm && (
