@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "./firebase.js";
 import { loadUserData, saveUserData } from "./storage.js";
 import { C, todayStr } from "./shared.jsx";
 import { FocusTab } from "./tabs/FocusTab.jsx";
-import { TasksTab } from "./tabs/TasksTab.jsx";
-import { CalendarTab } from "./tabs/CalendarTab.jsx";
-import { GoalsTab } from "./tabs/GoalsTab.jsx";
-import { TankTab } from "./tabs/TankTab.jsx";
+// デフォルト以外のタブは遅延ロードして初回の読み込みを軽くする
+const TasksTab    = lazy(() => import("./tabs/TasksTab.jsx").then((m) => ({ default: m.TasksTab })));
+const CalendarTab = lazy(() => import("./tabs/CalendarTab.jsx").then((m) => ({ default: m.CalendarTab })));
+const GoalsTab    = lazy(() => import("./tabs/GoalsTab.jsx").then((m) => ({ default: m.GoalsTab })));
+const TankTab     = lazy(() => import("./tabs/TankTab.jsx").then((m) => ({ default: m.TankTab })));
 import { LoginScreen } from "./auth/LoginScreen.jsx";
 import { IconFocus, IconTasks, IconCal, IconGoals, IconTank } from "./icons.jsx";
 import { enablePush, disablePush } from "./push.js";
@@ -420,13 +421,15 @@ export default function FocusLapApp() {
       )}
 
       <main style={{ flex: 1, padding: "0 16px 96px", position: "relative", zIndex: 1 }}>
-        {tab === "focus" && (
-          <FocusTab data={data} update={update} growthOf={growthOf} taskId={focusTaskId} setTaskId={setFocusTaskId} />
-        )}
-        {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} uid={user?.uid} />}
-        {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
-        {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
-        {tab === "tank"  && <TankTab data={data} update={update} />}
+        <Suspense fallback={<div style={{ textAlign: "center", color: C.sub, fontSize: 13, padding: "40px 0" }}>読み込み中…</div>}>
+          {tab === "focus" && (
+            <FocusTab data={data} update={update} growthOf={growthOf} taskId={focusTaskId} setTaskId={setFocusTaskId} />
+          )}
+          {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} uid={user?.uid} />}
+          {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
+          {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
+          {tab === "tank"  && <TankTab data={data} update={update} />}
+        </Suspense>
       </main>
 
       {help && <HelpSheet tab={tab} title={titles[tab]} onClose={() => setHelp(false)} />}

@@ -16,6 +16,7 @@ npm install                  # 初回セットアップ
 npm run dev                  # 開発サーバー（ポート5173）
 npm run build                # dist/ にビルド
 npm run preview              # ビルド後プレビュー
+npm test                     # vitest（shared.jsx のコアロジック単体テスト）
 node scripts/make-icons.mjs  # icon.svg から PNG アイコンを再生成（sharp使用）
 ```
 
@@ -29,7 +30,8 @@ src/
   App.jsx               # ルート：Auth・データ管理・タブ切替・設定/ヘルプシート・通知スケジューラ
   firebase.js           # Firebase初期化（env未設定時は無効化）
   storage.js            # Firestore or localStorage の透過ラッパー
-  shared.jsx            # デザイントークン・FISHES・TaskForm/TaskRow等の共有コンポーネント
+  shared.jsx            # デザイントークン・FISHES・日付/繰り返しヘルパー・TaskForm/TaskRow等
+  shared.test.js        # 上記コアロジックのvitest単体テスト（fishForMinutes/nextRepeatDate等）
   fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント）
   icons.jsx             # タブナビ用の海テイスト線画アイコン5種
   push.js               # Web Push購読（enablePush / disablePush）
@@ -217,6 +219,9 @@ VITE_VAPID_PUBLIC_KEY   # Web Push用（npx web-push generate-vapid-keys）
 ## デプロイ・運用
 
 - `git push origin main` → Vercelが自動デプロイ
+- ビルドは `vite.config.js` の manualChunks で firebase / react を別チャンクに分離（更新時のキャッシュ効率化）。
+  非デフォルトのタブ（Tasks/Calendar/Goals/Tank）は `App.jsx` で `lazy()` 遅延ロード
+- コアロジックを変更したら `npm test` で `shared.test.js` を通すこと
 - アイコン変更時は `node scripts/make-icons.mjs` でPNGも再生成してコミット
 - サービス全体像・トラブル対応・バックアップ一覧は `OPERATIONS.md` を参照（ユーザー向け運用ガイド）
 - Firestoreルールは本番設定済み（無期限）。OAuth同意画面は本番公開済み
