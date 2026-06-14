@@ -82,6 +82,7 @@ ArchiveEntry = { id /* 元taskId */, title, goalTitle: string|null, goalType: "g
 Goal    = { id, title, date: string|null, type: "goal"|"work" }
 Task    = { id, title, goalId: string|null, due: string|null,
             startTime: string|null /* "HH:MM" */, done: boolean, note?: string,
+            progress?: number /* 0-100の進捗。100でdone */, progressNote?: string /* 引き継ぎメモ */,
             repeat?: "daily"|"weekly"|"biweekly"|"monthly"|"bimonthly"|null,
             repeatUntil?: string|null /* 繰り返しの最終日（事前生成の終端） */,
             repeatGroup?: string /* 事前生成された系列の共通id（完了時に次回生成しない目印） */,
@@ -114,9 +115,15 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - プルダウンは `assignableTasks` で**同名タスクを1件に重複排除**（過去のコピーで増えても選択肢は膨らまない）
 - 割り振り時にstartTimeは設定しない（コピーは `startTime: null`）。時刻はTaskRowの✎編集で後から設定する方針
 
+### タスクの進捗（引き継ぎ式）
+- `shared.jsx: ProgressSheet` — 5%刻みで進捗を積み上げ、引き継ぎメモ（progressNote）を残せる
+- セッション完了後（非autoRepeat／ストップウォッチ）に自動表示。TaskRowの📊ボタンでいつでも開ける
+- 100%で `applyTaskDone()` を呼び自動完了。FocusTabのタスク選択時に前回の進捗とメモを表示
+
 ### アーカイブの仕組み
-- `shared.jsx: TaskRow` のチェックON時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）。
-  チェックOFFで該当エントリ削除（メモは残る）
+- 完了処理は `shared.jsx: applyTaskDone(d, taskId, done)` に集約（チェックボックス・進捗100%・編集が共用）。
+  完了時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）、繰り返しの次回生成もここ
+- チェックOFFで該当エントリ削除（メモは残る）
 - TankTabの振り返りはarchiveを表示する。タスク本体を×で削除しても記録とメモは消えない
 
 ### セキュリティルール

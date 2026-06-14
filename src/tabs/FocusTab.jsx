@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat } from "../shared.jsx";
+import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat, ProgressSheet } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
 
 // 完了通知（許可済みのときだけ）
@@ -111,6 +111,8 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const [quickTitle, setQuickTitle] = useState("");
   const [banner, setBanner] = useState(null);
   const [celebration, setCelebration] = useState(null);
+  const [progressTaskId, setProgressTaskId] = useState(null); // セッション後の進捗入力対象
+  const pendingProgressRef = useRef(null);
   const [manualMin, setManualMin] = useState(25);
   // ストップウォッチ（カウントアップ計測）
   const [swElapsed, setSwElapsed] = useState(0); // 経過秒
@@ -224,6 +226,8 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         return d;
       });
       setCelebration({ fish: fish.e, name: fish.name, count: newCount });
+      // 繰り返しモードでなく、タスク選択中なら祝福のあとに進捗入力を出す
+      if (!repeat && taskId) pendingProgressRef.current = taskId;
       chime();
       notify(`${fish.e} ${fish.name}を獲得！休憩しましょう`);
       setMode("rest");
@@ -283,6 +287,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       return d;
     });
     setCelebration({ fish: fish.e, name: fish.name, count: newCount });
+    if (taskId) pendingProgressRef.current = taskId;
     chime();
     notify(`${min}分の集中を記録しました！`);
     setSwElapsed(0);
@@ -350,7 +355,15 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   return (
     <div>
       {celebration && (
-        <Celebration fish={celebration.fish} name={celebration.name} count={celebration.count} onClose={() => setCelebration(null)} />
+        <Celebration fish={celebration.fish} name={celebration.name} count={celebration.count}
+          onClose={() => {
+            setCelebration(null);
+            // 祝福を閉じたら、対象タスクの進捗入力シートを開く
+            if (pendingProgressRef.current) { setProgressTaskId(pendingProgressRef.current); pendingProgressRef.current = null; }
+          }} />
+      )}
+      {progressTaskId && data.tasks.find((t) => t.id === progressTaskId) && (
+        <ProgressSheet task={data.tasks.find((t) => t.id === progressTaskId)} update={update} onClose={() => setProgressTaskId(null)} />
       )}
 
       {/* タスク選択 */}
@@ -373,6 +386,14 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           </optgroup>
         )}
       </select>
+
+      {/* 前回の進捗・引き継ぎメモ（続きから取り組むため） */}
+      {task && (task.progress || task.progressNote) && (
+        <div style={{ background: "#F0FAFA", border: `1px solid ${C.line}`, borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: C.deepAqua }}>📊 前回の続き：{task.progress || 0}%</div>
+          {task.progressNote && <div style={{ fontSize: 12, color: C.ink, marginTop: 3, whiteSpace: "pre-wrap" }}>{task.progressNote}</div>}
+        </div>
+      )}
 
       {/* 今回やることメモ（任意） */}
       {task && (

@@ -76,6 +76,108 @@ export const stageOf = (g) =>
   g <= 7   ? { label: "成魚",     size: 36 } :
              { label: "大物",     size: Math.min(42 + (g - 8) * 2, 52) };
 
+/* 完了処理（アーカイブ記録＋繰り返し次回生成）。チェックボックスと進捗100%で共用 */
+export function applyTaskDone(d, taskId, done) {
+  const x = d.tasks.find((t) => t.id === taskId);
+  if (!x) return d;
+  x.done = done;
+  if (!Array.isArray(d.archive)) d.archive = [];
+  d.archive = d.archive.filter((a) => a.id !== x.id);
+  if (done) {
+    x.progress = 100;
+    const g = d.goals.find((gg) => gg.id === x.goalId);
+    const sess = d.sessions.filter((s) => s.taskId === x.id);
+    d.archive.push({
+      id: x.id, title: x.title,
+      goalTitle: g?.title ?? null, goalType: g?.type ?? null,
+      due: x.due ?? null, completedAt: todayStr(),
+      sessions: sess.length,
+      fish: sess.length ? sess[sess.length - 1].fish : null,
+    });
+    // 最終日なしの単発繰り返しのみ、完了時に次回分を自動作成
+    if (x.repeat && !x.repeatGroup) {
+      const next = nextRepeatDate(x.due, x.repeat);
+      if (!x.repeatUntil || next <= x.repeatUntil) {
+        const newId = uid();
+        d.tasks.push({
+          id: newId, title: x.title, goalId: x.goalId,
+          due: next, startTime: x.startTime ?? null,
+          repeat: x.repeat, repeatUntil: x.repeatUntil ?? null, note: x.note, done: false,
+        });
+        x.nextId = newId;
+      }
+    }
+  } else if (x.nextId) {
+    // チェックを外したら、自動作成した次回分を取り消す（未着手の場合のみ）
+    const nt = d.tasks.find((y) => y.id === x.nextId);
+    if (nt && !nt.done) d.tasks = d.tasks.filter((y) => y.id !== x.nextId);
+    delete x.nextId;
+  }
+  return d;
+}
+
+/* ================= 進捗シート（5%刻みで積み上げ・100%で完了） ================= */
+export function ProgressSheet({ task, update, onClose }) {
+  const [p, setP] = useState(task.progress || 0);
+  const [memo, setMemo] = useState(task.progressNote || "");
+  const clamp = (v) => Math.max(0, Math.min(100, v));
+
+  const save = (forceComplete) => {
+    const complete = forceComplete || p >= 100;
+    update((d) => {
+      const x = d.tasks.find((t) => t.id === task.id);
+      if (x) { x.progress = complete ? 100 : p; x.progressNote = memo; }
+      if (complete) applyTaskDone(d, task.id, true);
+      return d;
+    });
+    onClose();
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "85vh", overflowY: "auto" }}>
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 800 }}>📊 タスクの進捗</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, margin: "2px 0 14px" }}>{task.title}</div>
+
+        <div style={{ textAlign: "center", marginBottom: 6 }}>
+          <span style={{ fontSize: 42, fontWeight: 800, color: p >= 100 ? C.deepAqua : C.aqua, fontVariantNumeric: "tabular-nums" }}>{p}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: C.sub }}>%</span>
+        </div>
+        <div style={{ height: 14, borderRadius: 7, background: "#E4EFEF", overflow: "hidden", marginBottom: 16 }}>
+          <div style={{ width: `${p}%`, height: "100%", background: `linear-gradient(90deg,${C.aqua},${C.deepAqua})`, transition: "width .25s" }} />
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+          <button onClick={() => setP((v) => clamp(v - 5))}
+            style={{ flex: 1, padding: "16px 0", borderRadius: 12, border: `1px solid ${C.line}`, background: "#fff", color: C.ink, fontSize: 18, fontWeight: 800, cursor: "pointer" }}>− 5%</button>
+          <button onClick={() => setP((v) => clamp(v + 5))}
+            style={{ flex: 1, padding: "16px 0", borderRadius: 12, border: "none", background: C.aqua, color: "#fff", fontSize: 18, fontWeight: 800, cursor: "pointer" }}>＋ 5%</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {[0, 25, 50, 75].map((v) => (
+            <button key={v} onClick={() => setP(v)}
+              style={{ flex: 1, padding: "8px 0", borderRadius: 999, border: `1px solid ${p === v ? C.deepAqua : C.line}`, background: p === v ? C.deepAqua : "#fff", color: p === v ? "#fff" : C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{v}%</button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}>✏️ 引き継ぎメモ（次回の自分へ）</div>
+        <textarea value={memo} onChange={(e) => setMemo(e.target.value)}
+          placeholder="例：CH3まで完了。次はCH4の演習から"
+          style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, resize: "vertical", minHeight: 60, fontFamily: "inherit", marginBottom: 16 }} />
+
+        <button onClick={() => save(true)}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.deepAqua, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 8 }}>
+          ✅ 完了にする（100%）
+        </button>
+        <button onClick={() => save(false)}
+          style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${C.aqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          {p >= 100 ? "完了して保存" : `${p}%で保存（続きは次回）`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ================= TaskForm ================= */
 export function TaskForm({ data, update, defaultDue = "", onAdded }) {
   const [title, setTitle] = useState("");
@@ -218,6 +320,7 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
 /* ================= TaskRow ================= */
 export function TaskRow({ t, data, update, growthOf, onFocus }) {
   const [editing, setEditing] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
   const [eTitle, setETitle] = useState("");
   const [eDue, setEDue] = useState("");
   const [eStart, setEStart] = useState("");
@@ -307,71 +410,52 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   // タスクに紐づいたセッションの中で最新のセッションから魚を取得
   const lastSession = [...data.sessions].reverse().find((s) => s.taskId === t.id);
   const displayFish = lastSession?.fish ?? "🥚";
+  const progress = t.progress || 0;
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
-      <button
-        onClick={() => update((d) => {
-          const x = d.tasks.find((x) => x.id === t.id);
-          x.done = !x.done;
-          // 完了したらアーカイブに永久記録（目標名も焼き込み、タスク/目標を消しても残る）
-          if (!Array.isArray(d.archive)) d.archive = [];
-          d.archive = d.archive.filter((a) => a.id !== x.id);
-          if (x.done) {
-            const g = d.goals.find((gg) => gg.id === x.goalId);
-            const sess = d.sessions.filter((s) => s.taskId === x.id);
-            d.archive.push({
-              id: x.id, title: x.title,
-              goalTitle: g?.title ?? null, goalType: g?.type ?? null,
-              due: x.due ?? null, completedAt: todayStr(),
-              sessions: sess.length,
-              fish: sess.length ? sess[sess.length - 1].fish : null,
-            });
-            // 繰り返しタスク：最終日なしの単発繰り返しのみ、完了時に次回分を自動作成
-            // （repeatGroup付き＝最終日まで事前生成済みなので何もしない）
-            if (x.repeat && !x.repeatGroup) {
-              const next = nextRepeatDate(x.due, x.repeat);
-              if (!x.repeatUntil || next <= x.repeatUntil) {
-                const newId = uid();
-                d.tasks.push({
-                  id: newId, title: x.title, goalId: x.goalId,
-                  due: next, startTime: x.startTime ?? null,
-                  repeat: x.repeat, repeatUntil: x.repeatUntil ?? null, note: x.note, done: false,
-                });
-                x.nextId = newId;
-              }
-            }
-          } else if (x.nextId) {
-            // チェックを外したら、自動作成した次回分を取り消す（未着手の場合のみ）
-            const nt = d.tasks.find((y) => y.id === x.nextId);
-            if (nt && !nt.done) d.tasks = d.tasks.filter((y) => y.id !== x.nextId);
-            delete x.nextId;
-          }
-          return d;
-        })}
-        style={{ width: 24, height: 24, borderRadius: 999, border: `2px solid ${t.done ? C.aqua : C.line}`, background: t.done ? C.aqua : "#fff", color: "#fff", cursor: "pointer", fontSize: 13, lineHeight: "20px", padding: 0, flexShrink: 0 }}>
-        {t.done ? "✓" : ""}
-      </button>
-      <div style={{ fontSize: 22, flexShrink: 0 }}>{displayFish}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, textDecoration: t.done ? "line-through" : "none", color: t.done ? C.sub : C.ink }}>{t.title}</div>
-        <div style={{ fontSize: 11, color: overdue ? C.red : C.sub, marginTop: 2 }}>
-          {g && <span style={{ color: C.deepAqua, fontWeight: 700 }}>● {g.title}　</span>}
-          {stage.label}（{growth}回）
-          {t.due ? (overdue ? `　期限超過 ${t.due}` : `　期限 ${t.due}`) : ""}
-          {t.startTime ? `　⏰ ${t.startTime}〜` : ""}
-          {t.repeat ? `　🔁${REPEATS[t.repeat]}` : ""}
+    <>
+      {showProgress && <ProgressSheet task={t} update={update} onClose={() => setShowProgress(false)} />}
+      <div style={{ background: C.card, border: `1px solid ${t.done ? C.line : progress >= 100 ? C.aqua : C.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          onClick={() => update((d) => applyTaskDone(d, t.id, !t.done))}
+          title={t.done ? "未完了に戻す" : "完了にする"}
+          style={{ width: 28, height: 28, borderRadius: 999, border: `2px solid ${t.done ? C.aqua : "#B8CDD0"}`, background: t.done ? C.aqua : "#fff", color: t.done ? "#fff" : "#C7D6D9", cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: "24px", padding: 0, flexShrink: 0 }}>
+          ✓
+        </button>
+        <div style={{ fontSize: 22, flexShrink: 0 }}>{displayFish}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, textDecoration: t.done ? "line-through" : "none", color: t.done ? C.sub : C.ink }}>{t.title}</div>
+          <div style={{ fontSize: 11, color: overdue ? C.red : C.sub, marginTop: 2 }}>
+            {g && <span style={{ color: C.deepAqua, fontWeight: 700 }}>● {g.title}　</span>}
+            {stage.label}（{growth}回）
+            {t.due ? (overdue ? `　期限超過 ${t.due}` : `　期限 ${t.due}`) : ""}
+            {t.startTime ? `　⏰ ${t.startTime}〜` : ""}
+            {t.repeat ? `　🔁${REPEATS[t.repeat]}` : ""}
+          </div>
+          {/* 進捗バー（着手済みで未完了のとき） */}
+          {progress > 0 && !t.done && (
+            <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ flex: 1, height: 5, borderRadius: 3, background: "#E4EFEF", overflow: "hidden" }}>
+                <div style={{ width: `${progress}%`, height: "100%", background: `linear-gradient(90deg,${C.aqua},${C.deepAqua})` }} />
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 800, color: C.deepAqua }}>{progress}%</span>
+            </div>
+          )}
         </div>
+        {!t.done && (
+          <button onClick={() => setShowProgress(true)} title="進捗を入力"
+            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>📊</button>
+        )}
+        <button onClick={startEdit} title="タスクを編集"
+          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 2px" }}>✎</button>
+        {onFocus && !t.done && (
+          <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
+            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>⏱</button>
+        )}
+        <button onClick={() => { if (window.confirm(`「${t.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; }); }}
+          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16 }}>×</button>
       </div>
-      <button onClick={startEdit} title="タスクを編集"
-        style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 2px" }}>✎</button>
-      {onFocus && !t.done && (
-        <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
-          style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>⏱</button>
-      )}
-      <button onClick={() => { if (window.confirm(`「${t.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; }); }}
-        style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16 }}>×</button>
-    </div>
+    </>
   );
 }
 
