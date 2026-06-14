@@ -179,15 +179,16 @@ export function ProgressSheet({ task, update, onClose }) {
 }
 
 /* ================= TaskForm ================= */
-export function TaskForm({ data, update, defaultDue = "", onAdded }) {
+export function TaskForm({ data, update, defaultDue = "", defaultGoalId = "", hideGoal = false, onAdded }) {
   const [title, setTitle] = useState("");
-  const [goalId, setGoalId] = useState("");
+  const [goalId, setGoalId] = useState(defaultGoalId);
   const [due, setDue] = useState(defaultDue);
   const [startTime, setStartTime] = useState("");
   const [repeat, setRepeat] = useState("");
   const [repeatUntil, setRepeatUntil] = useState("");
 
   useEffect(() => setDue(defaultDue), [defaultDue]);
+  useEffect(() => setGoalId(defaultGoalId), [defaultGoalId]);
 
   const weekend = () => {
     const d = new Date();
@@ -302,12 +303,16 @@ export function TaskForm({ data, update, defaultDue = "", onAdded }) {
         </div>
       )}
 
-      <span style={label}>⑤ 長期目標と紐付け（任意）</span>
-      <select value={goalId} onChange={(e) => setGoalId(e.target.value)}
-        style={{ width: "100%", padding: "10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff" }}>
-        <option value="">紐付けない</option>
-        {data.goals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
-      </select>
+      {!hideGoal && (
+        <>
+          <span style={label}>⑤ 長期目標と紐付け（任意）</span>
+          <select value={goalId} onChange={(e) => setGoalId(e.target.value)}
+            style={{ width: "100%", padding: "10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff" }}>
+            <option value="">紐付けない</option>
+            {data.goals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+          </select>
+        </>
+      )}
 
       <button onClick={add}
         style={{ width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 12, border: "none", background: title.trim() ? C.aqua : "#BFDEDE", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>

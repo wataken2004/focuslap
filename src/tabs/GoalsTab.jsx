@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, uid, todayStr, TaskRow, FISHES } from "../shared.jsx";
+import { C, uid, todayStr, TaskRow, TaskForm, FISHES } from "../shared.jsx";
 
 // 目標に紐づくセッションの集計
 function goalStats(goalId, tasks, sessions) {
@@ -18,19 +18,13 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
   const [date, setDate] = useState("");
   const [type, setType] = useState("goal");
   const [openId, setOpenId] = useState(null);
-  const [subTitle, setSubTitle] = useState("");
+  const [addingFor, setAddingFor] = useState(null); // タスク追加フォームを開いている目標id
 
   const add = () => {
     if (!title.trim()) return;
     if (type === "goal" && !date) return;
     update((d) => { d.goals.push({ id: uid(), title: title.trim(), date: date || null, type }); return d; });
     setTitle(""); setDate("");
-  };
-
-  const addSub = (goalId) => {
-    if (!subTitle.trim()) return;
-    update((d) => { d.tasks.unshift({ id: uid(), title: subTitle.trim(), goalId, due: null, done: false }); return d; });
-    setSubTitle("");
   };
 
   const daysLeft = (d) => Math.ceil((new Date(d) - new Date(todayStr())) / 86400000);
@@ -120,7 +114,7 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
               </div>
             )}
 
-            <button onClick={() => { setOpenId(open ? null : g.id); setSubTitle(""); }}
+            <button onClick={() => { setOpenId(open ? null : g.id); setAddingFor(null); }}
               style={{ width: "100%", marginTop: 10, padding: "9px 0", borderRadius: 10, border: `1px dashed ${C.line}`, background: open ? "#F0FAFA" : "#fff", color: C.deepAqua, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
               {open ? "タスクを閉じる ▲" : `タスクを見る・追加する ▼（${linked.length}件）`}
             </button>
@@ -131,14 +125,19 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
                   <div style={{ fontSize: 12, color: C.sub, textAlign: "center", padding: "8px 0" }}>まだタスクがありません。</div>
                 )}
                 {linked.map((t) => <TaskRow key={t.id} t={t} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />)}
-                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                  <input value={subTitle} onChange={(e) => setSubTitle(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addSub(g.id)}
-                    placeholder="この目標にタスクを追加"
-                    style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13 }} />
-                  <button onClick={() => addSub(g.id)}
-                    style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, cursor: "pointer" }}>追加</button>
-                </div>
+
+                {addingFor === g.id ? (
+                  <div style={{ marginTop: 8 }}>
+                    <TaskForm data={data} update={update} defaultGoalId={g.id} hideGoal onAdded={() => setAddingFor(null)} />
+                    <button onClick={() => setAddingFor(null)}
+                      style={{ width: "100%", marginTop: 6, padding: "8px 0", borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>キャンセル</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setAddingFor(g.id)}
+                    style={{ width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                    ＋ この目標にタスクを追加（時間・繰り返しも設定）
+                  </button>
+                )}
               </div>
             )}
           </div>
