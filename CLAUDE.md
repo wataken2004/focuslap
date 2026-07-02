@@ -125,6 +125,7 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
   完了時にarchiveへ追加（目標名・タイプを焼き込むため目標削除後も表示可能）、繰り返しの次回生成もここ
 - チェックOFFで該当エントリ削除（メモは残る）
 - TankTabの振り返りはarchiveを表示する。タスク本体を×で削除しても記録とメモは消えない
+- 手動削除：カードの🗑で記録＋メモを削除（confirm付き）、メモ編集内の「🗑 メモを削除」でメモのみ削除
 
 ### セキュリティルール
 `users/{userId}/**` は `request.auth.uid == userId` のみ読み書き可。
@@ -206,7 +207,8 @@ GitHub Secrets: `FIREBASE_SERVICE_ACCOUNT` / `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE
 - ナビ：すりガラス（backdrop-filter）＋`icons.jsx` の線画アイコン、アクティブはアクア楕円
 - 図鑑・スポットライトは深海ネイビーのパネル。図鑑は獲得魚が中央配置（中心距離ソート）
 - `document.hidden` 時は `.app-paused` クラスで全CSSアニメーション停止（省電力）
-- ボトムシート（ヘルプ/設定）は maxHeight 75vh でスクロール可
+- ボトムシート（ヘルプ/設定/進捗）は共通クラス `.sheet`（App.jsxの<style>で定義：85dvh・
+  タッチスクロール・overscroll-behavior）＋ safe-area-inset-bottom のpadding。ナビも safe-area 対応
 
 各タブの「?」ボタン → `App.jsx: HELP` の使い方説明。**機能を追加・変更したら HELP も更新すること。**
 

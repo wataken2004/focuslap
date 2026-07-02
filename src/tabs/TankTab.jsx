@@ -239,6 +239,21 @@ export function TankTab({ data, update }) {
                     {memo ? "✏️ 編集" : "✏️ メモ"}
                   </span>
                 )}
+                {!isEditing && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`「${t.title}」の記録を振り返りから削除しますか？（元に戻せません）`)) {
+                        update((d) => {
+                          d.archive = (d.archive || []).filter((a) => a.id !== t.id);
+                          if (d.memos) delete d.memos[t.id];
+                          return d;
+                        });
+                      }
+                    }}
+                    title="この記録を削除"
+                    style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 13, flexShrink: 0, padding: "2px 4px" }}>🗑</button>
+                )}
               </div>
 
               {/* 保存済みメモの表示 */}
@@ -259,6 +274,16 @@ export function TankTab({ data, update }) {
                     style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.aqua}`, fontSize: 13, resize: "vertical", minHeight: 64, fontFamily: "inherit", background: "#fff" }}
                   />
                   <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+                    {memo && (
+                      <button type="button"
+                        onClick={() => {
+                          update((d) => { if (d.memos) delete d.memos[t.id]; return d; });
+                          setEditingId(null);
+                        }}
+                        style={{ marginRight: "auto", padding: "7px 12px", borderRadius: 999, border: "1px solid #F2C9C9", background: "#FFF5F5", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        🗑 メモを削除
+                      </button>
+                    )}
                     <button type="button" onClick={() => setEditingId(null)}
                       style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                       キャンセル

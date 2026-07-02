@@ -59,14 +59,14 @@ const HELP = {
     "泳いでいる魚や図鑑のマスをタップすると、大きく泳ぐ姿を観察できます",
     "図鑑は獲得した魚ほど中央に集まります。未獲得はシルエット＋必要時間のヒント付き",
     "振り返り：完了したタスクのカードをタップすると、メモを書いて記録できます",
-    "完了タスクの記録とメモは、タスクを×で削除しても振り返りに残り続けます",
+    "完了タスクの記録とメモは、タスクを×で削除しても振り返りに残り続けます（🗑で記録やメモを個別に削除もできます）",
   ],
 };
 
 function HelpSheet({ tab, title, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "75vh", overflowY: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} className="sheet" style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom))" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 12 }}>💡「{title}」タブの使い方</div>
         {HELP[tab].map((h, i) => (
           <div key={i} style={{ display: "flex", gap: 8, marginBottom: 10, fontSize: 13, color: C.ink, lineHeight: 1.6 }}>
@@ -177,7 +177,7 @@ function SettingsSheet({ user, data, update, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "75vh", overflowY: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} className="sheet" style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom))" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 6 }}>⚙️ 設定</div>
 
         {/* アカウント */}
@@ -373,6 +373,8 @@ export default function FocusLapApp() {
         @keyframes drift  { 0%,100%{transform:translateX(0) scaleX(-1)} 48%{transform:translateX(26px) scaleX(-1)} 50%{transform:translateX(26px) scaleX(1)} 98%{transform:translateX(0) scaleX(1)} }
         @keyframes floatUp { 0%{transform:translateY(0);opacity:0} 8%{opacity:1} 100%{transform:translateY(-130vh);opacity:.5} }
         .app-paused * { animation-play-state: paused !important; }
+        /* ボトムシート共通：モバイルで確実にスクロールできるようにする */
+        .sheet { max-height: 85vh; max-height: 85dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
         button { transition: transform .08s ease, filter .15s ease; }
         button:active { transform: scale(.96); }
         button:hover { filter: brightness(1.05); }
@@ -438,7 +440,7 @@ export default function FocusLapApp() {
       {help && <HelpSheet tab={tab} title={titles[tab]} onClose={() => setHelp(false)} />}
       {settingsOpen && <SettingsSheet user={user} data={data} update={update} onClose={() => setSettingsOpen(false)} />}
 
-      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", zIndex: 10 }}>
+      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", zIndex: 10, paddingBottom: "env(safe-area-inset-bottom)" }}>
         {[["focus", IconFocus, "集中"], ["tasks", IconTasks, "タスク"], ["cal", IconCal, "予定"], ["goals", IconGoals, "目標"], ["tank", IconTank, "水槽"]].map(([k, Icon, label]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ flex: 1, padding: "8px 0 12px", background: "none", border: "none", cursor: "pointer", color: tab === k ? C.deepAqua : C.sub, fontWeight: tab === k ? 800 : 500, fontSize: 11 }}>

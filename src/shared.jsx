@@ -135,42 +135,43 @@ export function ProgressSheet({ task, update, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "85vh", overflowY: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} className="sheet"
+        style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "16px 20px calc(24px + env(safe-area-inset-bottom))" }}>
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 800 }}>📊 タスクの進捗</div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, margin: "2px 0 14px" }}>{task.title}</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, margin: "2px 0 10px" }}>{task.title}</div>
 
-        <div style={{ textAlign: "center", marginBottom: 6 }}>
-          <span style={{ fontSize: 42, fontWeight: 800, color: p >= 100 ? C.deepAqua : C.aqua, fontVariantNumeric: "tabular-nums" }}>{p}</span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: C.sub }}>%</span>
+        <div style={{ textAlign: "center", marginBottom: 4 }}>
+          <span style={{ fontSize: 38, fontWeight: 800, color: p >= 100 ? C.deepAqua : C.aqua, fontVariantNumeric: "tabular-nums" }}>{p}</span>
+          <span style={{ fontSize: 17, fontWeight: 800, color: C.sub }}>%</span>
         </div>
-        <div style={{ height: 14, borderRadius: 7, background: "#E4EFEF", overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ height: 12, borderRadius: 6, background: "#E4EFEF", overflow: "hidden", marginBottom: 12 }}>
           <div style={{ width: `${p}%`, height: "100%", background: `linear-gradient(90deg,${C.aqua},${C.deepAqua})`, transition: "width .25s" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
           <button onClick={() => setP((v) => clamp(v - 5))}
-            style={{ flex: 1, padding: "16px 0", borderRadius: 12, border: `1px solid ${C.line}`, background: "#fff", color: C.ink, fontSize: 18, fontWeight: 800, cursor: "pointer" }}>− 5%</button>
+            style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: `1px solid ${C.line}`, background: "#fff", color: C.ink, fontSize: 17, fontWeight: 800, cursor: "pointer" }}>− 5%</button>
           <button onClick={() => setP((v) => clamp(v + 5))}
-            style={{ flex: 1, padding: "16px 0", borderRadius: 12, border: "none", background: C.aqua, color: "#fff", fontSize: 18, fontWeight: 800, cursor: "pointer" }}>＋ 5%</button>
+            style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: "none", background: C.aqua, color: "#fff", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>＋ 5%</button>
         </div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           {[0, 25, 50, 75].map((v) => (
             <button key={v} onClick={() => setP(v)}
-              style={{ flex: 1, padding: "8px 0", borderRadius: 999, border: `1px solid ${p === v ? C.deepAqua : C.line}`, background: p === v ? C.deepAqua : "#fff", color: p === v ? "#fff" : C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{v}%</button>
+              style={{ flex: 1, padding: "7px 0", borderRadius: 999, border: `1px solid ${p === v ? C.deepAqua : C.line}`, background: p === v ? C.deepAqua : "#fff", color: p === v ? "#fff" : C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{v}%</button>
           ))}
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}>✏️ 引き継ぎメモ（次回の自分へ）</div>
         <textarea value={memo} onChange={(e) => setMemo(e.target.value)}
           placeholder="例：CH3まで完了。次はCH4の演習から"
-          style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, resize: "vertical", minHeight: 60, fontFamily: "inherit", marginBottom: 16 }} />
+          style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, resize: "vertical", minHeight: 56, fontFamily: "inherit", marginBottom: 12 }} />
 
         <button onClick={() => save(true)}
-          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.deepAqua, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 8 }}>
+          style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: C.deepAqua, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 8 }}>
           ✅ 完了にする（100%）
         </button>
         <button onClick={() => save(false)}
-          style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${C.aqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1px solid ${C.aqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
           {p >= 100 ? "完了して保存" : `${p}%で保存（続きは次回）`}
         </button>
       </div>
@@ -420,7 +421,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   return (
     <>
       {showProgress && <ProgressSheet task={t} update={update} onClose={() => setShowProgress(false)} />}
-      <div style={{ background: C.card, border: `1px solid ${t.done ? C.line : progress >= 100 ? C.aqua : C.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ background: C.card, border: `1px solid ${t.done ? C.line : progress >= 100 ? C.aqua : C.line}`, borderRadius: 14, padding: "11px 10px 11px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <button
           onClick={() => update((d) => applyTaskDone(d, t.id, !t.done))}
           title={t.done ? "未完了に戻す" : "完了にする"}
@@ -449,16 +450,16 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
         </div>
         {!t.done && (
           <button onClick={() => setShowProgress(true)} title="進捗を入力"
-            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>📊</button>
+            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0 }}>📊</button>
         )}
         <button onClick={startEdit} title="タスクを編集"
-          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 2px" }}>✎</button>
+          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 1px" }}>✎</button>
         {onFocus && !t.done && (
           <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
-            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 8px", flexShrink: 0 }}>⏱</button>
+            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0 }}>⏱</button>
         )}
         <button onClick={() => { if (window.confirm(`「${t.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; }); }}
-          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16 }}>×</button>
+          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16, flexShrink: 0, padding: "2px 2px" }}>×</button>
       </div>
     </>
   );
