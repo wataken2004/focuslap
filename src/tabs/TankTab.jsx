@@ -92,7 +92,7 @@ export function TankTab({ data, update }) {
       )}
 
       {/* 水槽 */}
-      <div style={{
+      <div className="dpanel" style={{
         position: "relative", height: 240, borderRadius: 20,
         background: "linear-gradient(180deg,#1B6FA8 0%,#11497A 50%,#0B2C4C 100%)",
         overflow: "hidden", marginBottom: 14,
@@ -139,7 +139,7 @@ export function TankTab({ data, update }) {
       </div>
 
       {/* 魚ずかん（水中パネル：獲得した魚は中央に集まる） */}
-      <div style={{ borderRadius: 20, padding: 16, marginBottom: 14, background: "linear-gradient(180deg,#11497A 0%,#0B2C4C 100%)", border: "1px solid #1B4A6E", position: "relative", overflow: "hidden" }}>
+      <div className="dpanel" style={{ borderRadius: 20, padding: 16, marginBottom: 14, background: "linear-gradient(180deg,#11497A 0%,#0B2C4C 100%)", border: "1px solid #1B4A6E", position: "relative", overflow: "hidden" }}>
         {/* 飾りの泡 */}
         <div style={{ position: "absolute", top: -20, right: -20, width: 96, height: 96, borderRadius: 999, background: "rgba(127,214,212,0.08)" }} />
         <div style={{ position: "absolute", bottom: -28, left: -16, width: 80, height: 80, borderRadius: 999, background: "rgba(127,214,212,0.05)" }} />
@@ -195,7 +195,7 @@ export function TankTab({ data, update }) {
       </div>
 
       {/* ===== 振り返り（完了したタスクのみ・タップでメモ） ===== */}
-      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
+      <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 4 }}>🔍 振り返り・メモ</div>
         <div style={{ fontSize: 11, color: C.sub, marginBottom: 12 }}>
           完了したタスクをタップするとメモを書けます（{archive.length}件）。タスクを削除しても記録とメモはここに残ります

@@ -36,7 +36,7 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
   return (
     <div>
       {/* 追加フォーム */}
-      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 14 }}>
+      <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
           {[["goal", "🎯 目標"], ["work", "💼 仕事・プロジェクト"]].map(([k, l]) => (
             <button key={k} onClick={() => setType(k)}
@@ -72,7 +72,7 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
         const hours = Math.floor(totalMin / 60);
         const mins = totalMin % 60;
         return (
-          <div key={g.id} style={{ background: C.card, border: `1px solid ${open ? C.aqua : C.line}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
+          <div key={g.id} className="wcard" style={{ background: C.card, border: `1px solid ${open ? C.aqua : C.line}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: b.fg, background: b.bg, padding: "4px 10px", borderRadius: 999, flexShrink: 0 }}>{b.label}</span>
               <div style={{ fontSize: 16, fontWeight: 800, flex: 1, minWidth: 0 }}>{g.title}</div>

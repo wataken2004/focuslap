@@ -90,7 +90,7 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
       </div>
 
       {/* グリッド */}
-      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 10, marginBottom: 14 }}>
+      <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 10, marginBottom: 14 }}>
         {view !== "day" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", textAlign: "center", marginBottom: 4 }}>
             {"日月火水木金土".split("").map((w, i) => (
@@ -134,7 +134,7 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
       )}
 
       {/* 既存タスクをこの日に割り振る（移動 or 別日にコピー。同名は1つにまとめて表示） */}
-      <div style={{ background: C.card, border: `1px solid ${assignId ? C.aqua : C.line}`, borderRadius: 12, padding: 10, marginBottom: 12 }}>
+      <div className="wcard" style={{ background: C.card, border: `1px solid ${assignId ? C.aqua : C.line}`, borderRadius: 12, padding: 10, marginBottom: 12 }}>
         <select value={assignId} onChange={(e) => setAssignId(e.target.value)}
           style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", fontSize: 12, color: assignId ? C.ink : C.sub }}>
           <option value="">📌 既存タスクをこの日（{selected.slice(5).replace("-", "/")}）に割り振る…</option>

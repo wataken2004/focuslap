@@ -362,7 +362,7 @@ export default function FocusLapApp() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(180deg,#F4FAFA 0%,#E2F1F3 45%,#D3E9ED 100%)",
+      background: "linear-gradient(180deg,#EAF8F9 0%,#C9E7ED 38%,#ABD6E0 72%,#96C9D6 100%)",
       color: C.ink,
       fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",
       display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto",
@@ -375,18 +375,30 @@ export default function FocusLapApp() {
         .app-paused * { animation-play-state: paused !important; }
         /* ボトムシート共通：モバイルで確実にスクロールできるようにする */
         .sheet { max-height: 85vh; max-height: 85dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+        /* 水中の立体感：白カードはふわっと浮かせ、上辺に水面の反射ハイライト */
+        .wcard { box-shadow: 0 8px 22px rgba(13,60,84,0.12), inset 0 1.5px 0 rgba(255,255,255,0.9); }
+        /* 深海パネル（タイマー・水槽・図鑑）：深い影＋アクアの縁光 */
+        .dpanel { box-shadow: 0 18px 40px rgba(4,20,34,0.40), inset 0 1px 0 rgba(127,214,212,0.25); border: 1px solid rgba(127,214,212,0.20) !important; }
         button { transition: transform .08s ease, filter .15s ease; }
         button:active { transform: scale(.96); }
         button:hover { filter: brightness(1.05); }
         @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
       `}</style>
 
-      {/* 背景に漂う泡（水中演出） */}
+      {/* 背景の水中演出：差し込む光＋漂う泡 */}
       <div aria-hidden style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+        {/* 水面から差し込む光のカーテン */}
+        <div style={{ position: "absolute", top: -120, left: "8%", width: 150, height: "72vh", background: "linear-gradient(180deg,rgba(255,255,255,0.5),rgba(255,255,255,0))", transform: "rotate(16deg)", filter: "blur(10px)" }} />
+        <div style={{ position: "absolute", top: -140, left: "42%", width: 90, height: "60vh", background: "linear-gradient(180deg,rgba(255,255,255,0.38),rgba(255,255,255,0))", transform: "rotate(20deg)", filter: "blur(12px)" }} />
+        <div style={{ position: "absolute", top: -100, right: "10%", width: 120, height: "55vh", background: "linear-gradient(180deg,rgba(255,255,255,0.32),rgba(255,255,255,0))", transform: "rotate(-14deg)", filter: "blur(11px)" }} />
+        {/* 深さのグラデーション（下ほど暗く） */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(255,255,255,0) 55%,rgba(23,70,96,0.10) 100%)" }} />
+        {/* 漂う泡 */}
         {[[8, 75, 44, 38], [76, 95, 80, 55], [54, 82, 28, 30], [28, 92, 60, 47]].map(([l, t, s, dur], i) => (
           <div key={i} style={{
             position: "absolute", left: `${l}%`, top: `${t}%`, width: s, height: s, borderRadius: 999,
-            border: "2px solid rgba(20,163,161,0.10)", background: "rgba(127,214,212,0.07)",
+            border: "2px solid rgba(20,163,161,0.14)", background: "rgba(127,214,212,0.10)",
+            boxShadow: "inset -4px -4px 8px rgba(255,255,255,0.35)",
             animation: `floatUp ${dur}s linear ${i * 7}s infinite`,
           }} />
         ))}
@@ -440,7 +452,7 @@ export default function FocusLapApp() {
       {help && <HelpSheet tab={tab} title={titles[tab]} onClose={() => setHelp(false)} />}
       {settingsOpen && <SettingsSheet user={user} data={data} update={update} onClose={() => setSettingsOpen(false)} />}
 
-      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", zIndex: 10, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.82)", backdropFilter: "blur(14px) saturate(1.4)", WebkitBackdropFilter: "blur(14px) saturate(1.4)", borderTop: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 -10px 28px rgba(10,44,64,0.16)", display: "flex", zIndex: 10, paddingBottom: "env(safe-area-inset-bottom)" }}>
         {[["focus", IconFocus, "集中"], ["tasks", IconTasks, "タスク"], ["cal", IconCal, "予定"], ["goals", IconGoals, "目標"], ["tank", IconTank, "水槽"]].map(([k, Icon, label]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ flex: 1, padding: "8px 0 12px", background: "none", border: "none", cursor: "pointer", color: tab === k ? C.deepAqua : C.sub, fontWeight: tab === k ? 800 : 500, fontSize: 11 }}>

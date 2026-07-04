@@ -238,7 +238,7 @@ export function TaskForm({ data, update, defaultDue = "", defaultGoalId = "", hi
   const label = { fontSize: 11, fontWeight: 800, color: C.sub, margin: "10px 0 6px", display: "block" };
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
+    <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14 }}>
       <span style={{ ...label, marginTop: 0 }}>① タスク名</span>
       <input
         value={title}
@@ -374,7 +374,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   // 編集モード
   if (editing) {
     return (
-      <div style={{ background: C.card, border: `2px solid ${C.aqua}`, borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      <div className="wcard" style={{ background: C.card, border: `2px solid ${C.aqua}`, borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}>✎ タスクを編集</div>
         <input value={eTitle} onChange={(e) => setETitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && saveEdit()}
@@ -421,7 +421,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   return (
     <>
       {showProgress && <ProgressSheet task={t} update={update} onClose={() => setShowProgress(false)} />}
-      <div style={{ background: C.card, border: `1px solid ${t.done ? C.line : progress >= 100 ? C.aqua : C.line}`, borderRadius: 14, padding: "11px 10px 11px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="wcard" style={{ background: C.card, border: `1px solid ${t.done ? C.line : progress >= 100 ? C.aqua : C.line}`, borderRadius: 14, padding: "11px 10px 11px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <button
           onClick={() => update((d) => applyTaskDone(d, t.id, !t.done))}
           title={t.done ? "未完了に戻す" : "完了にする"}
@@ -472,7 +472,7 @@ export const numInput = {
 
 export function Stat({ label, value, accent }) {
   return (
-    <div style={{ flex: 1, background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: "12px 8px", textAlign: "center" }}>
+    <div className="wcard" style={{ flex: 1, background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: "12px 8px", textAlign: "center" }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: accent ? C.deepAqua : C.ink }}>{value}</div>
       <div style={{ fontSize: 10, color: C.sub, marginTop: 2 }}>{label}</div>
     </div>

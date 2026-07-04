@@ -429,7 +429,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
       {timerKind === "stopwatch" ? (
         /* ===== ストップウォッチパネル ===== */
-        <div style={{ background: C.ink, borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
+        <div className="dpanel" style={{ background: "linear-gradient(180deg,#0F3F63 0%,#0A2238 78%,#081B2E 100%)", borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
           <div style={{ fontSize: 12, letterSpacing: "0.2em", color: "#7FD6D4", fontWeight: 700 }}>
             STOPWATCH — 勉強した時間をそのまま記録
           </div>
@@ -478,7 +478,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           </div>
         </div>
       ) : (
-      <div style={{ background: C.ink, borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
+      <div className="dpanel" style={{ background: "linear-gradient(180deg,#0F3F63 0%,#0A2238 78%,#081B2E 100%)", borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
         <div style={{ fontSize: 12, letterSpacing: "0.2em", color: mode === "work" ? "#7FD6D4" : C.yellow, fontWeight: 700 }}>
           {mode === "work" ? "WORK — 集中タイム" : "REST — 休憩タイム"}
         </div>
@@ -551,7 +551,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
       {/* 今日の獲得魚 */}
       {Object.keys(todayFishCounts).length > 0 && (
-        <div style={{ background: C.card, borderRadius: 16, padding: "12px 16px", marginTop: 14, border: `1px solid ${C.line}` }}>
+        <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: "12px 16px", marginTop: 14, border: `1px solid ${C.line}` }}>
           <div style={{ fontSize: 11, color: C.sub, fontWeight: 700, marginBottom: 8 }}>今日獲得した魚</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {Object.entries(todayFishCounts).map(([fish, count]) => (
@@ -571,7 +571,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       </div>
 
       {/* 週間グラフ */}
-      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
+      <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 700, marginBottom: 10 }}>直近7日の集中時間</div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 70 }}>
           {week.map((w, i) => (
@@ -587,7 +587,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
       {/* タイマー設定：魚カードで時間を選択（ポモドーロ時のみ） */}
       {timerKind === "timer" && (
-      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
+      <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 700, marginBottom: 10 }}>
           集中時間を選ぶ（魚をタップ）
         </div>
@@ -625,7 +625,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       )}
 
       {/* スマホ学習モード */}
-      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${settings.phoneMode ? C.aqua : C.line}` }}>
+      <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${settings.phoneMode ? C.aqua : C.line}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>📱 スマホ学習モード</div>
@@ -659,7 +659,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       </div>
 
       {/* アプリ外の勉強をあとから記録 */}
-      <div style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
+      <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 4 }}>✏️ あとから記録</div>
         <div style={{ fontSize: 11, color: C.sub, marginBottom: 10 }}>
           タイマーを使わなかった勉強時間を手動で追加できます。上で選択中のタスクに記録されます。
