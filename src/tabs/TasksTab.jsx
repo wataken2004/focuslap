@@ -24,7 +24,7 @@ export function TasksTab({ data, update, growthOf, onFocus, uid }) {
     }
   };
   const shown = data.tasks.filter((t) =>
-    filter === "open" ? !t.done : filter === "done" ? t.done : true
+    t.kind !== "event" && (filter === "open" ? !t.done : filter === "done" ? t.done : true)
   );
 
   return (

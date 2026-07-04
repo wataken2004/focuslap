@@ -44,7 +44,8 @@ const HELP = {
     "✎ボタンでタスク名・期限・開始時刻・繰り返し・紐付けを後から編集できます",
   ],
   cal: [
-    "月・週・日を切り替えて、日付をタップするとその日のタスクと予定が見えます",
+    "月・週・日を切り替えて、日付をタップするとその日の予定とタスクが見えます",
+    "🕐予定：授業・バイト・約束など時間の約束を登録。開始5分前に通知が届きます（完了チェックは不要な軽い記録）",
     "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクをその日へ移動／コピーできます",
     "コピーなら同じタスクを複数の日に置けます。開始時刻は割り振り後に✎編集で設定します",
     "タスク追加時に繰り返し＋最終日を設定すると、その期間の予定がカレンダーに全部並びます",
@@ -276,15 +277,15 @@ export default function FocusLapApp() {
         const key = `focuslap:ntf:${today}:${t.id}`;
         if (nowMin >= startMin - 5 && nowMin <= startMin && !localStorage.getItem(key)) {
           localStorage.setItem(key, "1");
-          appNotify(`⏰ まもなく開始：${t.title}（${t.startTime}〜）`);
+          appNotify(`${t.kind === "event" ? "🕐 まもなく予定" : "⏰ まもなく開始"}：${t.title}（${t.startTime}〜）`);
         }
       });
       // 期限リマインド：期限が今日or過去の未完了タスクを1時間ごとに通知（8〜22時）
       if (data.settings.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 22 * 60) {
         const last = +localStorage.getItem("focuslap:lastDueReminder") || 0;
         if (Date.now() - last >= 3600000) {
-          const dueToday = data.tasks.filter((t) => !t.done && t.due === today);
-          const overdue = data.tasks.filter((t) => !t.done && t.due && t.due < today);
+          const dueToday = data.tasks.filter((t) => !t.done && t.kind !== "event" && t.due === today);
+          const overdue = data.tasks.filter((t) => !t.done && t.kind !== "event" && t.due && t.due < today);
           if (dueToday.length + overdue.length > 0) {
             localStorage.setItem("focuslap:lastDueReminder", String(Date.now()));
             if (dueToday.length + overdue.length === 1) {

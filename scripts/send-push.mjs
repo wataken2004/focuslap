@@ -49,14 +49,14 @@ for (const userRef of userRefs) {
       const key = `${today}:${t.id}`;
       if (nowMin >= startMin - 10 && nowMin <= startMin && !sent[key]) {
         sent[key] = true;
-        messages.push({ title: "⏰ まもなく開始", body: `${t.title}（${t.startTime}〜）` });
+        messages.push({ title: t.kind === "event" ? "🕐 まもなく予定" : "⏰ まもなく開始", body: `${t.title}（${t.startTime}〜）` });
       }
     }
 
     // ② 期限リマインド：期限が今日or過去の未完了タスクを1時間ごと（8〜22時JST）
     if (d.settings?.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 22 * 60 && Date.now() - lastDue >= 3600000) {
-      const dueToday = tasks.filter((t) => !t.done && t.due === today);
-      const overdue = tasks.filter((t) => !t.done && t.due && t.due < today);
+      const dueToday = tasks.filter((t) => !t.done && t.kind !== "event" && t.due === today);
+      const overdue = tasks.filter((t) => !t.done && t.kind !== "event" && t.due && t.due < today);
       if (dueToday.length + overdue.length > 0) {
         lastDue = Date.now();
         if (dueToday.length + overdue.length === 1) {

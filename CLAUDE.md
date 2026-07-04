@@ -82,6 +82,7 @@ ArchiveEntry = { id /* 元taskId */, title, goalTitle: string|null, goalType: "g
 Goal    = { id, title, date: string|null, type: "goal"|"work" }
 Task    = { id, title, goalId: string|null, due: string|null,
             startTime: string|null /* "HH:MM" */, done: boolean, note?: string,
+            kind?: "event" /* 予定（カレンダー専用・完了なし・開始通知のみ対象） */,
             progress?: number /* 0-100の進捗。100でdone */, progressNote?: string /* 引き継ぎメモ */,
             repeat?: "daily"|"weekly"|"biweekly"|"monthly"|"bimonthly"|null,
             repeatUntil?: string|null /* 繰り返しの最終日（事前生成の終端） */,
@@ -109,6 +110,12 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - `settings.hourlyReminder` ON時、期限が今日or過去の未完了タスクを**1時間ごと**通知（8〜22時）
 - 旧「未完了N件すべて」を対象にする方式は廃止し、期限ベースに絞った
 - throttleはタイムスタンプ：アプリ内 `focuslap:lastDueReminder` / pushは `pushMeta/state.lastDue`
+
+### 予定（kind: "event"）
+- カレンダーの「🕐 予定」欄から追加する軽量エントリ（tasks配列に同居）。時刻＋タイトルのみ
+- タスク一覧・集中タブの選択肢・目標集計・期限リマインド・アーカイブからは**除外**
+- 開始5分前通知は既存のstartTime通知に乗る（文言だけ「🕐 まもなく予定」に分岐）
+- 除外フィルタは `t.kind !== "event"` で統一（TasksTab/FocusTab/CalendarTab割り振り/通知2箇所）
 
 ### カレンダーの既存タスク割り振り（CalendarTab）
 - 選択日のプルダウンから既存タスクを「**この日へ移動**」（dueを変更）or「**＋この日にコピー**」（同タスクを複製して別日にも配置）

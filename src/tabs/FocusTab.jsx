@@ -317,7 +317,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
   const todaySessions = data.sessions.filter((s) => s.date === todayStr());
   const minutes = todaySessions.reduce((a, s) => a + s.minutes, 0);
-  const openTasks = data.tasks.filter((t) => !t.done);
+  const openTasks = data.tasks.filter((t) => !t.done && t.kind !== "event");
   // タスク選択を見やすくグループ化（今日期限→目標ごと→その他）
   const todayKey = todayStr();
   const dueToday = openTasks.filter((t) => t.due === todayKey);

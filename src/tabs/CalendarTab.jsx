@@ -7,8 +7,27 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [selected, setSelected] = useState(todayStr());
   const [showForm, setShowForm] = useState(false);
   const [assignId, setAssignId] = useState("");
+  const [evTitle, setEvTitle] = useState("");
+  const [evTime, setEvTime] = useState("");
 
-  const tasksOn = (key) => data.tasks.filter((t) => t.due === key);
+  // タスク（やること）と予定（時間の約束）を分けて扱う
+  const tasksOn = (key) => data.tasks.filter((t) => t.due === key && t.kind !== "event");
+  const eventsOn = (key) =>
+    data.tasks
+      .filter((t) => t.due === key && t.kind === "event")
+      .sort((a, b) => (a.startTime || "99:99").localeCompare(b.startTime || "99:99"));
+
+  const addEvent = () => {
+    if (!evTitle.trim()) return;
+    update((d) => {
+      d.tasks.unshift({ id: uid(), title: evTitle.trim(), kind: "event", goalId: null, due: selected, startTime: evTime || null, done: false });
+      return d;
+    });
+    setEvTitle("");
+    if (evTime && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  };
 
   const move = (n) => {
     const c = new Date(cursor);
@@ -37,6 +56,7 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
   const dayCell = (d, compact) => {
     const key = fmt(d);
     const ts = tasksOn(key);
+    const evs = eventsOn(key);
     const isToday = key === todayStr();
     const isSel = key === selected;
     const inMonth = d.getMonth() === cursor.getMonth();
@@ -50,8 +70,9 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
         }}>
         <div style={{ fontSize: 13, fontWeight: isToday ? 800 : 600 }}>{d.getDate()}</div>
         <div style={{ fontSize: 10, lineHeight: 1.1, minHeight: 12, color: C.deepAqua }}>
-          {ts.slice(0, 3).map((t) => (t.done ? "✓" : "●")).join("")}
-          {ts.length > 3 && "…"}
+          <span style={{ color: "#2E6FA8" }}>{"○".repeat(Math.min(evs.length, 2))}</span>
+          {ts.slice(0, 3 - Math.min(evs.length, 2)).map((t) => (t.done ? "✓" : "●")).join("")}
+          {ts.length + evs.length > 3 && "…"}
         </div>
       </button>
     );
@@ -64,7 +85,7 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
   const assignableTasks = useMemo(() => {
     const seen = new Set();
     return data.tasks.filter((t) => {
-      if (t.done || t.due === selected || seen.has(t.title)) return false;
+      if (t.done || t.kind === "event" || t.due === selected || seen.has(t.title)) return false;
       seen.add(t.title);
       return true;
     });
@@ -113,6 +134,37 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
             {selTasks.length === 0 ? "この日のタスクはありません" : `タスク ${selDone}/${selTasks.length} 完了`}
           </div>
         )}
+      </div>
+
+      {/* この日の予定（時間の約束。開始5分前に通知） */}
+      <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 8 }}>
+          🕐 {selected.slice(5).replace("-", "/")} の予定
+          <span style={{ fontSize: 10, fontWeight: 600, color: C.sub, marginLeft: 6 }}>授業・バイト・約束など（開始5分前に通知）</span>
+        </div>
+
+        {eventsOn(selected).map((ev) => (
+          <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 10, background: "#F0FAFA", border: `1px solid ${C.line}`, marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: ev.startTime ? C.deepAqua : "#9AB4BC", borderRadius: 6, padding: "3px 7px", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+              {ev.startTime || "終日"}
+            </span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</span>
+            <button
+              onClick={() => { if (window.confirm(`予定「${ev.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== ev.id); return d; }); }}
+              style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 15, flexShrink: 0, padding: "2px 4px" }}>×</button>
+          </div>
+        ))}
+
+        <div style={{ display: "flex", gap: 6, marginTop: eventsOn(selected).length ? 2 : 0 }}>
+          <input type="time" value={evTime} onChange={(e) => setEvTime(e.target.value)}
+            style={{ width: 92, padding: "8px 6px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, flexShrink: 0 }} />
+          <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addEvent()}
+            placeholder="予定を追加（例：3限 経済学、バイト）"
+            style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13 }} />
+          <button onClick={addEvent}
+            style={{ padding: "8px 13px", borderRadius: 10, border: "none", background: evTitle.trim() ? C.aqua : "#BFDEDE", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>＋</button>
+        </div>
       </div>
 
       {/* 選択日のタスク */}
