@@ -196,7 +196,30 @@ function SettingsSheet({ user, data, update, onClose }) {
   };
   const shareUrl = data.shareId ? `${location.origin}${location.pathname}?share=${data.shareId}` : "";
 
-  const createShare = () => update((d) => { d.shareId = genShareId(); return d; });
+  const createShare = async () => {
+    const id = genShareId();
+    setGBusy(true);
+    try {
+      // 先にFirestoreへ書き込み、成功した場合だけ発行済みにする（失敗を握りつぶさない）
+      await saveShareDoc(id, {
+        owner: user.uid,
+        ownerName: user.displayName || "",
+        updatedAt: Date.now(),
+        items: calendarItems(data),
+      });
+      update((d) => { d.shareId = id; return d; });
+      copyText(`${location.origin}${location.pathname}?share=${id}`, "閲覧リンクを発行してコピーしました！そのまま友達に送れます。");
+    } catch (e) {
+      console.error("share create failed", e);
+      alert(
+        e?.code === "permission-denied"
+          ? "発行に失敗しました：Firestoreのルールが未更新です。\nFirebaseコンソール → Firestore Database → ルール に、共有用ルール（shares / groups）を追加して「公開」してください。"
+          : `発行に失敗しました（${e?.code || e?.message || "不明なエラー"}）。通信環境を確認して再度お試しください。`
+      );
+    }
+    setGBusy(false);
+  };
+
   const stopShare = () => {
     const id = data.shareId;
     update((d) => { delete d.shareId; return d; });
@@ -324,9 +347,9 @@ function SettingsSheet({ user, data, update, onClose }) {
                     <button onClick={stopShare} style={{ ...miniBtn, color: C.red, borderColor: "#F2C9C9" }}>停止</button>
                   </div>
                 ) : (
-                  <button onClick={createShare}
-                    style={{ padding: "7px 16px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-                    発行
+                  <button onClick={createShare} disabled={gBusy}
+                    style={{ padding: "7px 16px", borderRadius: 999, border: "none", background: gBusy ? "#BFDEDE" : C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+                    {gBusy ? "処理中…" : "発行"}
                   </button>
                 )}
               </div>
