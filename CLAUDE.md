@@ -74,6 +74,8 @@ scripts/
   memos: { [taskId: string]: string }          // 完了タスクの振り返りメモ
   pendingSession?: { endAt: number; minutes: number }  // 実行中タイマーの終了予定（push用）
   archive: ArchiveEntry[]  // 完了タスクの永久記録（タスク/目標を削除しても残る）
+  shareId?: string         // カレンダー閲覧リンクのID（発行中のみ）
+  groups: { id: string, name: string }[]  // 参加中のグループ
 }
 
 ArchiveEntry = { id /* 元taskId */, title, goalTitle: string|null, goalType: "goal"|"work"|null,
@@ -134,8 +136,20 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - TankTabの振り返りはarchiveを表示する。タスク本体を×で削除しても記録とメモは消えない
 - 手動削除：カードの🗑で記録＋メモを削除（confirm付き）、メモ編集内の「🗑 メモを削除」でメモのみ削除
 
+### カレンダー共有
+- **閲覧リンク**：`shares/{shareId}` に `{owner, ownerName, updatedAt, items[]}` を保存。
+  `?share=ID` で `SharedCalendarPage`（ログイン不要・読み取りは誰でも可＝IDが秘密）
+- **グループ**：`groups/{gid}`（name等）＋ `members/{uid}` ＋ `calendars/{uid}`。
+  `?group=ID` で `GroupCalendarPage`（要ログイン・メンバーのみ読める。メンバー色分け表示）
+- items は `App.jsx: calendarItems()` が生成（title/due/startTime/kind/done のみ。魚・メモは含めない）
+- 同期は保存エフェクト内（400msデバウンス＋JSON比較で変化時のみ書き込み）
+- 参加/作成/退出は⚙️設定のSettingsSheet。参加中リストは payload の `groups` に保持
+- ルーティングは `main.jsx` がURLクエリで分岐（アプリ本体を経由しない独立ページ）
+
 ### セキュリティルール
 `users/{userId}/**` は `request.auth.uid == userId` のみ読み書き可。
+`shares/{id}` は read全許可・writeはowner一致のみ。`groups` はメンバーのみread、
+members/{uid}・calendars/{uid} は本人のみwrite（詳細はFirestoreコンソールのルール参照）。
 GitHub Actions の Admin SDK はルールをバイパスする。
 
 ---

@@ -1,7 +1,11 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "./firebase.js";
-import { loadUserData, saveUserData } from "./storage.js";
+import {
+  loadUserData, saveUserData,
+  saveShareDoc, deleteShareDoc,
+  createGroupDocs, joinGroupDocs, leaveGroupDocs, saveGroupCalendar,
+} from "./storage.js";
 import { C, todayStr } from "./shared.jsx";
 import { FocusTab } from "./tabs/FocusTab.jsx";
 // デフォルト以外のタブは遅延ロードして初回の読み込みを軽くする
@@ -21,6 +25,18 @@ const appNotify = (msg) => {
     }
   } catch { /* 非対応ブラウザは無視 */ }
 };
+
+// 共有用：カレンダーに載る最小限の情報だけを抜き出す（魚・メモ・進捗は含めない）
+const calendarItems = (d) =>
+  d.tasks.filter((t) => t.due).map((t) => ({
+    title: t.title, due: t.due, startTime: t.startTime || null,
+    kind: t.kind === "event" ? "event" : "task", done: !!t.done,
+  }));
+
+// 招待コード等に使う推測不能なID
+const genShareId = () =>
+  (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") :
+    Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36));
 
 /* ---- タブごとの使い方説明 ---- */
 const HELP = {
@@ -49,6 +65,7 @@ const HELP = {
     "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクをその日へ移動／コピーできます",
     "コピーなら同じタスクを複数の日に置けます。開始時刻は割り振り後に✎編集で設定します",
     "タスク追加時に繰り返し＋最終日を設定すると、その期間の予定がカレンダーに全部並びます",
+    "📤 ⚙️設定からカレンダーを共有できます：閲覧専用リンク（見るだけ）と、👥グループ（メンバー同士で色分け表示）の2種類",
   ],
   goals: [
     "🎯目標 / 💼仕事を追加し、タスクを紐付けて進捗バーで管理します",
@@ -119,6 +136,8 @@ function migrateData(d) {
   // 逃げた魚カウントは日ごとにリセット
   if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); }
   d.goals.forEach((g) => { if (!g.type) g.type = "goal"; });
+  // カレンダー共有：参加中グループの一覧
+  if (!Array.isArray(d.groups)) d.groups = [];
   // 完了タスクの永久アーカイブ（タスクを削除しても記録とメモが残る）
   if (!Array.isArray(d.archive)) d.archive = [];
   d.tasks.forEach((t) => {
@@ -168,6 +187,70 @@ function SettingsSheet({ user, data, update, onClose }) {
     setBusy(false);
   };
 
+  /* ---- カレンダー共有（閲覧リンク／グループ） ---- */
+  const [gBusy, setGBusy] = useState(false);
+
+  const copyText = (text, msg) => {
+    try { navigator.clipboard.writeText(text); alert(msg); }
+    catch { window.prompt("コピーしてください", text); }
+  };
+  const shareUrl = data.shareId ? `${location.origin}${location.pathname}?share=${data.shareId}` : "";
+
+  const createShare = () => update((d) => { d.shareId = genShareId(); return d; });
+  const stopShare = () => {
+    const id = data.shareId;
+    update((d) => { delete d.shareId; return d; });
+    if (id) deleteShareDoc(id).catch(() => {});
+  };
+
+  const createGroup = async () => {
+    const name = window.prompt("グループ名を入力（例：ゼミ、家族、勉強仲間）");
+    if (!name || !name.trim()) return;
+    setGBusy(true);
+    try {
+      const gid = genShareId();
+      await createGroupDocs(gid, name.trim(), user.uid, user.displayName || user.email || "メンバー");
+      update((d) => { d.groups = [...(d.groups || []), { id: gid, name: name.trim() }]; return d; });
+      copyText(`${location.origin}${location.pathname}?group=${gid}`,
+        "グループを作成し、招待リンクをコピーしました。友達に送ってください！");
+    } catch (e) {
+      console.error(e);
+      alert("作成に失敗しました。Firestoreルールの更新が必要かもしれません。");
+    }
+    setGBusy(false);
+  };
+
+  const joinGroup = async () => {
+    const raw = window.prompt("招待リンク（またはコード）を貼り付けてください");
+    if (!raw) return;
+    const m = raw.match(/group=([A-Za-z0-9]+)/);
+    const gid = m ? m[1] : raw.trim();
+    if (!gid) return;
+    if ((data.groups || []).some((g) => g.id === gid)) { alert("すでに参加しています"); return; }
+    setGBusy(true);
+    try {
+      const g = await joinGroupDocs(gid, user.uid, user.displayName || user.email || "メンバー");
+      if (!g) {
+        alert("グループが見つかりません。リンクを確認してください。");
+      } else {
+        update((d) => { d.groups = [...(d.groups || []), { id: gid, name: g.name }]; return d; });
+        alert(`「${g.name}」に参加しました！`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("参加に失敗しました。");
+    }
+    setGBusy(false);
+  };
+
+  const leaveGroup = (g) => {
+    if (!window.confirm(`「${g.name}」から退出しますか？`)) return;
+    update((d) => { d.groups = (d.groups || []).filter((x) => x.id !== g.id); return d; });
+    leaveGroupDocs(g.id, user.uid).catch(() => {});
+  };
+
+  const miniBtn = { padding: "6px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.deepAqua, fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 };
+
   const row = { display: "flex", alignItems: "center", gap: 10, padding: "13px 0", borderBottom: `1px solid ${C.line}` };
   const toggleBtn = (on, onClick, disabled) => (
     <button onClick={onClick} disabled={disabled}
@@ -207,7 +290,7 @@ function SettingsSheet({ user, data, update, onClose }) {
         </div>
 
         {/* 期限リマインド */}
-        <div style={{ ...row, borderBottom: "none" }}>
+        <div style={row}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🔔 期限リマインド</div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1時間ごとに通知（8〜22時）</div>
@@ -218,6 +301,66 @@ function SettingsSheet({ user, data, update, onClose }) {
             }
             update((d) => { d.settings.hourlyReminder = !d.settings.hourlyReminder; return d; });
           }, false)}
+        </div>
+
+        {/* カレンダー共有 */}
+        <div style={{ ...row, borderBottom: "none", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>📤 カレンダー共有</div>
+          {!user ? (
+            <div style={{ fontSize: 11, color: C.sub }}>Googleまたはメールでログインすると使えます</div>
+          ) : (
+            <>
+              {/* 閲覧専用リンク */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1, fontSize: 11, color: C.sub, lineHeight: 1.5 }}>
+                  {data.shareId
+                    ? "閲覧リンク発行中（見るだけ・タイトルと時間のみ共有）"
+                    : "リンクを知っている人が見られる、閲覧専用リンクを発行"}
+                </div>
+                {data.shareId ? (
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <button onClick={() => copyText(shareUrl, "リンクをコピーしました")} style={miniBtn}>コピー</button>
+                    <button onClick={() => window.open(shareUrl, "_blank")} style={miniBtn}>開く</button>
+                    <button onClick={stopShare} style={{ ...miniBtn, color: C.red, borderColor: "#F2C9C9" }}>停止</button>
+                  </div>
+                ) : (
+                  <button onClick={createShare}
+                    style={{ padding: "7px 16px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+                    発行
+                  </button>
+                )}
+              </div>
+
+              <div style={{ height: 1, background: C.line }} />
+
+              {/* グループ */}
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>
+                👥 グループ
+                <span style={{ fontSize: 10, fontWeight: 600, color: C.sub, marginLeft: 6 }}>メンバー同士でカレンダーを見せ合う</span>
+              </div>
+              {(data.groups || []).length === 0 && (
+                <div style={{ fontSize: 11, color: C.sub }}>まだ参加していません。作成するか、招待リンクで参加できます。</div>
+              )}
+              {(data.groups || []).map((g) => (
+                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 5, background: "#F0FAFA", borderRadius: 10, padding: "8px 10px" }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: C.ink, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
+                  <button onClick={() => copyText(`${location.origin}${location.pathname}?group=${g.id}`, "招待リンクをコピーしました")} style={miniBtn}>招待</button>
+                  <button onClick={() => window.open(`${location.origin}${location.pathname}?group=${g.id}`, "_blank")} style={miniBtn}>開く</button>
+                  <button onClick={() => leaveGroup(g)} style={{ ...miniBtn, color: C.red, borderColor: "#F2C9C9" }}>退出</button>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={createGroup} disabled={gBusy}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                  {gBusy ? "処理中…" : "＋ グループ作成"}
+                </button>
+                <button onClick={joinGroup} disabled={gBusy}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${C.deepAqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+                  コードで参加
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <button onClick={onClose}
@@ -320,11 +463,35 @@ export default function FocusLapApp() {
     })();
   }, [user, guestMode]);
 
-  // データが変わったら保存（400ms デバウンス）
+  // データが変わったら保存（400ms デバウンス）＋共有先へカレンダーを同期
+  const lastPushRef = useRef({});
   useEffect(() => {
     if (!data) return;
     const t = setTimeout(() => {
       saveUserData(user?.uid ?? null, data).catch((e) => console.error("save failed", e));
+      if (user) {
+        const items = calendarItems(data);
+        const json = JSON.stringify(items);
+        // 個人共有リンク
+        if (data.shareId && lastPushRef.current["s:" + data.shareId] !== json) {
+          lastPushRef.current["s:" + data.shareId] = json;
+          saveShareDoc(data.shareId, {
+            owner: user.uid, ownerName: user.displayName || "",
+            updatedAt: Date.now(), items,
+          }).catch((e) => console.error("share sync failed", e));
+        }
+        // 参加中グループ
+        (data.groups || []).forEach((g) => {
+          const k = "g:" + g.id;
+          if (lastPushRef.current[k] !== json) {
+            lastPushRef.current[k] = json;
+            saveGroupCalendar(g.id, user.uid, {
+              name: user.displayName || user.email || "メンバー",
+              updatedAt: Date.now(), items,
+            }).catch((e) => console.error("group sync failed", e));
+          }
+        });
+      }
     }, 400);
     return () => clearTimeout(t);
   }, [data, user]);
