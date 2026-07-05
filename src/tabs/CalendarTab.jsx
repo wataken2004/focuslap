@@ -1,7 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
+import { loadGroupData } from "../storage.js";
 
-export function CalendarTab({ data, update, growthOf, onFocus }) {
+// グループ表示のメンバー色（uid順で割り当て）
+const MEMBER_COLORS = ["#0E7C7B", "#3A6EA5", "#B4762F", "#7B5EA7", "#C05B7A", "#4A8A58", "#5B7283"];
+
+export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
   const [view, setView] = useState("month");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(todayStr());
@@ -9,6 +13,28 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
   const [assignId, setAssignId] = useState("");
   const [evTitle, setEvTitle] = useState("");
   const [evTime, setEvTime] = useState("");
+  const [evAllday, setEvAllday] = useState(false);
+  const [viewGroup, setViewGroup] = useState(null); // null=自分のカレンダー / グループid
+  const [grp, setGrp] = useState({ loading: false, error: false, name: "", calendars: [] });
+  const inGroup = !!viewGroup;
+  const groups = data.groups || [];
+
+  // 選択中グループのメンバー全員のカレンダーを読み込む
+  useEffect(() => {
+    if (!viewGroup) { setGrp({ loading: false, error: false, name: "", calendars: [] }); return; }
+    let alive = true;
+    setGrp({ loading: true, error: false, name: "", calendars: [] });
+    loadGroupData(viewGroup)
+      .then((d) => {
+        if (!alive) return;
+        if (!d) { setGrp({ loading: false, error: true, name: "", calendars: [] }); return; }
+        const cals = [...d.calendars].sort((a, b) => a.uid.localeCompare(b.uid))
+          .map((c, i) => ({ ...c, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }));
+        setGrp({ loading: false, error: false, name: d.group?.name || "", calendars: cals });
+      })
+      .catch(() => { if (alive) setGrp({ loading: false, error: true, name: "", calendars: [] }); });
+    return () => { alive = false; };
+  }, [viewGroup]);
 
   // タスク（やること）と予定（時間の約束）を分けて扱う
   const tasksOn = (key) => data.tasks.filter((t) => t.due === key && t.kind !== "event");
@@ -17,14 +43,24 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
       .filter((t) => t.due === key && t.kind === "event")
       .sort((a, b) => (a.startTime || "99:99").localeCompare(b.startTime || "99:99"));
 
+  // グループ表示：全メンバーの項目をその日ぶん集約（色・名前つき）
+  const groupItemsOn = (key) => {
+    const out = [];
+    grp.calendars.forEach((c) => (c.items || []).forEach((it) => {
+      if (it.due === key) out.push({ ...it, member: c.name || "メンバー", color: c.color, isMe: c.uid === myUid });
+    }));
+    return out.sort((a, b) => (a.kind === "event" ? 0 : 1) - (b.kind === "event" ? 0 : 1) || (a.startTime || "99:99").localeCompare(b.startTime || "99:99"));
+  };
+
   const addEvent = () => {
     if (!evTitle.trim()) return;
+    const st = evAllday ? null : (evTime || null);
     update((d) => {
-      d.tasks.unshift({ id: uid(), title: evTitle.trim(), kind: "event", goalId: null, due: selected, startTime: evTime || null, done: false });
+      d.tasks.unshift({ id: uid(), title: evTitle.trim(), kind: "event", goalId: null, due: selected, startTime: st, done: false });
       return d;
     });
     setEvTitle("");
-    if (evTime && "Notification" in window && Notification.permission === "default") {
+    if (st && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
   };
@@ -55,25 +91,31 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
 
   const dayCell = (d, compact) => {
     const key = fmt(d);
-    const ts = tasksOn(key);
-    const evs = eventsOn(key);
     const isToday = key === todayStr();
     const isSel = key === selected;
     const inMonth = d.getMonth() === cursor.getMonth();
+    const cellStyle = {
+      flex: compact ? 1 : "none", minHeight: compact ? 56 : 52, padding: "4px 2px", borderRadius: 10, cursor: "pointer",
+      border: isSel ? `2px solid ${C.deepAqua}` : `1px solid ${isToday ? C.aqua : "transparent"}`,
+      background: isSel ? "#E6F5F5" : "transparent",
+      color: inMonth || compact ? (d.getDay() === 0 ? C.red : d.getDay() === 6 ? "#3A6EA5" : C.ink) : "#B8C9D2",
+    };
     return (
-      <button key={key} onClick={() => { setSelected(key); if (view === "day") setCursor(d); }}
-        style={{
-          flex: compact ? 1 : "none", minHeight: compact ? 56 : 52, padding: "4px 2px", borderRadius: 10, cursor: "pointer",
-          border: isSel ? `2px solid ${C.deepAqua}` : `1px solid ${isToday ? C.aqua : "transparent"}`,
-          background: isSel ? "#E6F5F5" : "transparent",
-          color: inMonth || compact ? (d.getDay() === 0 ? C.red : d.getDay() === 6 ? "#3A6EA5" : C.ink) : "#B8C9D2",
-        }}>
+      <button key={key} onClick={() => { setSelected(key); if (view === "day") setCursor(d); }} style={cellStyle}>
         <div style={{ fontSize: 13, fontWeight: isToday ? 800 : 600 }}>{d.getDate()}</div>
-        <div style={{ fontSize: 10, lineHeight: 1.1, minHeight: 12, color: C.deepAqua }}>
-          <span style={{ color: "#2E6FA8" }}>{"○".repeat(Math.min(evs.length, 2))}</span>
-          {ts.slice(0, 3 - Math.min(evs.length, 2)).map((t) => (t.done ? "✓" : "●")).join("")}
-          {ts.length + evs.length > 3 && "…"}
-        </div>
+        {inGroup ? (
+          <div style={{ display: "flex", justifyContent: "center", gap: 2, minHeight: 12, alignItems: "center" }}>
+            {[...new Set(groupItemsOn(key).map((i) => i.color))].slice(0, 3).map((c, i) => (
+              <span key={i} style={{ width: 6, height: 6, borderRadius: 999, background: c }} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 10, lineHeight: 1.1, minHeight: 12, color: C.deepAqua }}>
+            <span style={{ color: "#2E6FA8" }}>{"○".repeat(Math.min(eventsOn(key).length, 2))}</span>
+            {tasksOn(key).slice(0, 3 - Math.min(eventsOn(key).length, 2)).map((t) => (t.done ? "✓" : "●")).join("")}
+            {tasksOn(key).length + eventsOn(key).length > 3 && "…"}
+          </div>
+        )}
       </button>
     );
   };
@@ -93,6 +135,41 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
 
   return (
     <div>
+      {/* 表示切替：自分／参加中グループ（グループがあるときだけ表示） */}
+      {groups.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto", paddingBottom: 2 }}>
+          <button onClick={() => setViewGroup(null)}
+            style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${!inGroup ? C.deepAqua : C.line}`, background: !inGroup ? C.deepAqua : C.card, color: !inGroup ? "#fff" : C.sub, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+            🐟 自分
+          </button>
+          {groups.map((g) => (
+            <button key={g.id} onClick={() => setViewGroup(g.id)}
+              style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${viewGroup === g.id ? C.deepAqua : C.line}`, background: viewGroup === g.id ? C.deepAqua : C.card, color: viewGroup === g.id ? "#fff" : C.sub, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+              👥 {g.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* グループ表示中：メンバー凡例／読み込み状態 */}
+      {inGroup && (
+        <div style={{ marginBottom: 10 }}>
+          {grp.loading && <div style={{ fontSize: 12, color: C.sub, padding: "4px 2px" }}>読み込み中…</div>}
+          {grp.error && <div style={{ fontSize: 12, color: C.red, padding: "4px 2px" }}>グループを読み込めませんでした。メンバーか確認してください。</div>}
+          {!grp.loading && !grp.error && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {grp.calendars.map((c) => (
+                <span key={c.uid} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.7)", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, color: C.ink }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: c.color }} />
+                  {c.uid === myUid ? "自分" : (c.name || "メンバー")}
+                </span>
+              ))}
+              {grp.calendars.length === 0 && <span style={{ fontSize: 11, color: C.sub }}>まだ誰も予定を追加していません。</span>}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ビュー切替 */}
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
         {[["month", "月"], ["week", "週"], ["day", "日"]].map(([k, l]) => (
@@ -131,11 +208,38 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
         )}
         {view === "day" && (
           <div style={{ textAlign: "center", padding: "8px 0", fontSize: 13, color: C.sub }}>
-            {selTasks.length === 0 ? "この日のタスクはありません" : `タスク ${selDone}/${selTasks.length} 完了`}
+            {inGroup
+              ? (groupItemsOn(selected).length === 0 ? "この日の予定はありません" : `みんなの予定 ${groupItemsOn(selected).length}件`)
+              : (selTasks.length === 0 ? "この日のタスクはありません" : `タスク ${selDone}/${selTasks.length} 完了`)}
           </div>
         )}
       </div>
 
+      {/* グループ表示中：選択日の みんなの予定（閲覧のみ） */}
+      {inGroup && !grp.loading && !grp.error && (
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>{selected.slice(5).replace("-", "/")} のみんなの予定</div>
+          {groupItemsOn(selected).length === 0 && (
+            <div className="wcard" style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, padding: 18, textAlign: "center", color: C.sub, fontSize: 13 }}>この日の予定はありません</div>
+          )}
+          {groupItemsOn(selected).map((it, i) => (
+            <div key={i} className="wcard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 6, background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, borderLeft: `4px solid ${it.color}` }}>
+              {it.kind === "event" ? (
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: it.startTime ? C.deepAqua : "#9AB4BC", borderRadius: 6, padding: "3px 7px", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{it.startTime || "終日"}</span>
+              ) : (
+                <span style={{ fontSize: 13, flexShrink: 0 }}>{it.done ? "✅" : "☐"}</span>
+              )}
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: it.done ? "line-through" : "none", color: it.done ? C.sub : C.ink }}>{it.title}</span>
+              {it.kind !== "event" && it.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}>⏰{it.startTime}</span>}
+              <span style={{ fontSize: 10, fontWeight: 800, color: it.color, flexShrink: 0 }}>{it.isMe ? "自分" : it.member}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ===== 自分のカレンダー（編集可）。グループ表示中は隠す ===== */}
+      {!inGroup && (
+      <>
       {/* この日の予定（時間の約束。開始5分前に通知） */}
       <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 8 }}>
@@ -156,8 +260,12 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
         ))}
 
         <div style={{ display: "flex", gap: 6, marginTop: eventsOn(selected).length ? 2 : 0 }}>
-          <input type="time" value={evTime} onChange={(e) => setEvTime(e.target.value)}
-            style={{ width: 92, padding: "8px 6px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, flexShrink: 0 }} />
+          <button onClick={() => setEvAllday((a) => !a)}
+            style={{ padding: "8px 10px", borderRadius: 10, border: `1px solid ${evAllday ? C.deepAqua : C.line}`, background: evAllday ? C.deepAqua : "#fff", color: evAllday ? "#fff" : C.sub, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>終日</button>
+          {!evAllday && (
+            <input type="time" value={evTime} onChange={(e) => setEvTime(e.target.value)}
+              style={{ width: 88, padding: "8px 6px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, flexShrink: 0 }} />
+          )}
           <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addEvent()}
             placeholder="予定を追加（例：3限 経済学、バイト）"
@@ -235,6 +343,8 @@ export function CalendarTab({ data, update, growthOf, onFocus }) {
       {selTasks.map((t) => (
         <TaskRow key={t.id} t={t} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
       ))}
+      </>
+      )}
     </div>
   );
 }

@@ -145,6 +145,10 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - 同期は保存エフェクト内（400msデバウンス＋JSON比較で変化時のみ書き込み）
 - 参加/作成/退出は⚙️設定のSettingsSheet。参加中リストは payload の `groups` に保持
 - ルーティングは `main.jsx` がURLクエリで分岐（アプリ本体を経由しない独立ページ）
+- **予定タブ内でもグループ表示可**：CalendarTab上部の切替チップで自分↔グループを選択。
+  グループ選択時は `loadGroupData` で全メンバーのカレンダーを読み、月グリッド＝色ドット・
+  選択日＝メンバー色つき一覧（閲覧のみ・編集UIは隠す）。`myUid` propで自分を判定
+- 予定の「終日」：CalendarTabの `evAllday` トグル。ONで時刻入力を隠し startTime:null で保存
 
 ### セキュリティルール
 `users/{userId}/**` は `request.auth.uid == userId` のみ読み書き可。

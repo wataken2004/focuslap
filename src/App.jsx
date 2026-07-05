@@ -61,7 +61,8 @@ const HELP = {
   ],
   cal: [
     "月・週・日を切り替えて、日付をタップするとその日の予定とタスクが見えます",
-    "🕐予定：授業・バイト・約束など時間の約束を登録。開始5分前に通知が届きます（完了チェックは不要な軽い記録）",
+    "🕐予定：授業・バイト・約束など時間の約束を登録。開始5分前に通知（完了チェック不要）。時刻なしは「終日」ボタンで登録できます",
+    "👥グループに参加していれば、上の切替チップで「自分」とグループを切り替え、メンバー全員の予定を色分けで見られます（閲覧のみ）",
     "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクをその日へ移動／コピーできます",
     "コピーなら同じタスクを複数の日に置けます。開始時刻は割り振り後に✎編集で設定します",
     "タスク追加時に繰り返し＋最終日を設定すると、その期間の予定がカレンダーに全部並びます",
@@ -634,7 +635,7 @@ export default function FocusLapApp() {
             <FocusTab data={data} update={update} growthOf={growthOf} taskId={focusTaskId} setTaskId={setFocusTaskId} />
           )}
           {tab === "tasks" && <TasksTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} uid={user?.uid} />}
-          {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
+          {tab === "cal"   && <CalendarTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} myUid={user?.uid} />}
           {tab === "goals" && <GoalsTab data={data} update={update} growthOf={growthOf} onFocus={goFocus} />}
           {tab === "tank"  && <TankTab data={data} update={update} />}
         </Suspense>
