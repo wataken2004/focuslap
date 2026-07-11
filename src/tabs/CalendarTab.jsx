@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
-import { loadGroupData } from "../storage.js";
+import { loadGroupData, addGroupEvent, deleteGroupEvent } from "../storage.js";
 
 // グループ表示のメンバー色（uid順で割り当て）
 const MEMBER_COLORS = ["#0E7C7B", "#3A6EA5", "#B4762F", "#7B5EA7", "#C05B7A", "#4A8A58", "#5B7283"];
+// グループ共有予定の色（メンバー色と混ざらない金色）
+const GROUP_EV_COLOR = "#B8860B";
 
-export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
+export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) {
   const [view, setView] = useState("month");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(todayStr());
@@ -15,26 +17,63 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
   const [evTime, setEvTime] = useState("");
   const [evAllday, setEvAllday] = useState(false);
   const [viewGroup, setViewGroup] = useState(null); // null=自分のカレンダー / グループid
-  const [grp, setGrp] = useState({ loading: false, error: false, name: "", calendars: [] });
+  const [grp, setGrp] = useState({ loading: false, error: false, name: "", calendars: [], events: [] });
+  const [gEvTitle, setGEvTitle] = useState("");
+  const [gEvTime, setGEvTime] = useState("");
+  const [gEvAllday, setGEvAllday] = useState(false);
   const inGroup = !!viewGroup;
   const groups = data.groups || [];
 
-  // 選択中グループのメンバー全員のカレンダーを読み込む
+  // 選択中グループのメンバー全員のカレンダー＋グループ共有予定を読み込む
   useEffect(() => {
-    if (!viewGroup) { setGrp({ loading: false, error: false, name: "", calendars: [] }); return; }
+    if (!viewGroup) { setGrp({ loading: false, error: false, name: "", calendars: [], events: [] }); return; }
     let alive = true;
-    setGrp({ loading: true, error: false, name: "", calendars: [] });
+    setGrp({ loading: true, error: false, name: "", calendars: [], events: [] });
     loadGroupData(viewGroup)
       .then((d) => {
         if (!alive) return;
-        if (!d) { setGrp({ loading: false, error: true, name: "", calendars: [] }); return; }
+        if (!d) { setGrp({ loading: false, error: true, name: "", calendars: [], events: [] }); return; }
         const cals = [...d.calendars].sort((a, b) => a.uid.localeCompare(b.uid))
           .map((c, i) => ({ ...c, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }));
-        setGrp({ loading: false, error: false, name: d.group?.name || "", calendars: cals });
+        setGrp({ loading: false, error: false, name: d.group?.name || "", calendars: cals, events: d.events || [] });
       })
-      .catch(() => { if (alive) setGrp({ loading: false, error: true, name: "", calendars: [] }); });
+      .catch(() => { if (alive) setGrp({ loading: false, error: true, name: "", calendars: [], events: [] }); });
     return () => { alive = false; };
   }, [viewGroup]);
+
+  // グループ共有の予定を追加（メンバー全員に見える）
+  const addGroupEv = async () => {
+    if (!gEvTitle.trim()) return;
+    if (!myUid) { alert("グループの予定を追加するにはログインが必要です。"); return; }
+    const ev = {
+      id: uid() + uid(),
+      title: gEvTitle.trim(),
+      due: selected,
+      startTime: gEvAllday ? null : (gEvTime || null),
+      createdBy: myUid,
+      createdByName: myName || "メンバー",
+      createdAt: Date.now(),
+    };
+    try {
+      await addGroupEvent(viewGroup, ev);
+      setGrp((s) => ({ ...s, events: [...s.events, ev] }));
+      setGEvTitle("");
+    } catch (e) {
+      console.error(e);
+      alert("追加に失敗しました。Firestoreルールに groups/events の許可が必要かもしれません。");
+    }
+  };
+
+  const removeGroupEv = async (ev) => {
+    if (!window.confirm(`グループの予定「${ev.title}」を削除しますか？`)) return;
+    try {
+      await deleteGroupEvent(viewGroup, ev.id);
+      setGrp((s) => ({ ...s, events: s.events.filter((x) => x.id !== ev.id) }));
+    } catch (e) {
+      console.error(e);
+      alert("削除できませんでした（作成者のみ削除できます）。");
+    }
+  };
 
   // タスク（やること）と予定（時間の約束）を分けて扱う
   const tasksOn = (key) => data.tasks.filter((t) => t.due === key && t.kind !== "event");
@@ -48,6 +87,10 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
   const myColor = grp.calendars.find((c) => c.uid === myUid)?.color || MEMBER_COLORS[0];
   const groupItemsOn = (key) => {
     const out = [];
+    // グループ共有の予定（金色・全員に見える）
+    grp.events.forEach((ev) => {
+      if (ev.due === key) out.push({ ...ev, kind: "event", member: `👥${ev.createdByName || ""}`, color: GROUP_EV_COLOR, isMe: false, isGroupEv: true });
+    });
     grp.calendars.forEach((c) => {
       if (c.uid === myUid) return; // 自分は下でライブ反映
       (c.items || []).forEach((it) => {
@@ -223,23 +266,47 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
         )}
       </div>
 
-      {/* グループ表示中：選択日の 他メンバーの予定（閲覧のみ。自分の分は下の編集エリアに出る） */}
+      {/* グループ表示中：グループの予定（共有）＋他メンバーの予定 */}
       {inGroup && !grp.loading && !grp.error && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>👥 {selected.slice(5).replace("-", "/")} の他メンバーの予定</div>
+        <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 8 }}>
+            👥 {selected.slice(5).replace("-", "/")} のグループの予定
+            <span style={{ fontSize: 10, fontWeight: 600, color: C.sub, marginLeft: 6 }}>ここに追加するとメンバー全員に表示</span>
+          </div>
+
+          {/* グループの予定を追加 */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            <button onClick={() => setGEvAllday((a) => !a)}
+              style={{ padding: "8px 10px", borderRadius: 10, border: `1px solid ${gEvAllday ? C.deepAqua : C.line}`, background: gEvAllday ? C.deepAqua : "#fff", color: gEvAllday ? "#fff" : C.sub, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>終日</button>
+            {!gEvAllday && (
+              <input type="time" value={gEvTime} onChange={(e) => setGEvTime(e.target.value)}
+                style={{ width: 88, padding: "8px 6px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, flexShrink: 0 }} />
+            )}
+            <input value={gEvTitle} onChange={(e) => setGEvTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addGroupEv()}
+              placeholder="グループの予定（例：ゼミ発表、飲み会）"
+              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13 }} />
+            <button onClick={addGroupEv}
+              style={{ padding: "8px 13px", borderRadius: 10, border: "none", background: gEvTitle.trim() ? GROUP_EV_COLOR : "#D8CBA8", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>＋</button>
+          </div>
+
           {groupItemsOn(selected).filter((it) => !it.isMe).length === 0 && (
-            <div className="wcard" style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, padding: 14, textAlign: "center", color: C.sub, fontSize: 12 }}>他のメンバーの予定はありません</div>
+            <div style={{ padding: "8px 0", textAlign: "center", color: C.sub, fontSize: 12 }}>グループ・他メンバーの予定はまだありません</div>
           )}
           {groupItemsOn(selected).filter((it) => !it.isMe).map((it, i) => (
-            <div key={i} className="wcard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 6, background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, borderLeft: `4px solid ${it.color}` }}>
+            <div key={it.isGroupEv ? it.id : `m${i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 9px", marginBottom: 6, background: it.isGroupEv ? "#FBF6E8" : "#F8FAFA", borderRadius: 10, border: `1px solid ${C.line}`, borderLeft: `4px solid ${it.color}` }}>
               {it.kind === "event" ? (
-                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: it.startTime ? C.deepAqua : "#9AB4BC", borderRadius: 6, padding: "3px 7px", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{it.startTime || "終日"}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: it.startTime ? (it.isGroupEv ? GROUP_EV_COLOR : C.deepAqua) : "#9AB4BC", borderRadius: 6, padding: "3px 7px", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{it.startTime || "終日"}</span>
               ) : (
                 <span style={{ fontSize: 13, flexShrink: 0 }}>{it.done ? "✅" : "☐"}</span>
               )}
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: it.done ? "line-through" : "none", color: it.done ? C.sub : C.ink }}>{it.title}</span>
               {it.kind !== "event" && it.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}>⏰{it.startTime}</span>}
               <span style={{ fontSize: 10, fontWeight: 800, color: it.color, flexShrink: 0 }}>{it.member}</span>
+              {it.isGroupEv && it.createdBy === myUid && (
+                <button onClick={() => removeGroupEv(it)}
+                  style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "1px 3px" }}>×</button>
+              )}
             </div>
           ))}
         </div>

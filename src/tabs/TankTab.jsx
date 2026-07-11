@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { C, FISHES, Stat, todayStr } from "../shared.jsx";
+import { C, FISHES, Stat } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
 
 /* ---- 魚スポットライト（タップした魚が大きく泳ぐ） ---- */

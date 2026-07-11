@@ -83,9 +83,21 @@ export async function loadGroupData(gid) {
   if (!gSnap.exists()) return null;
   const mem = await getDocs(collection(db, "groups", gid, "members"));
   const cal = await getDocs(collection(db, "groups", gid, "calendars"));
+  const evs = await getDocs(collection(db, "groups", gid, "events")).catch(() => ({ docs: [] }));
   return {
     group: gSnap.data(),
     members: mem.docs.map((d) => ({ uid: d.id, ...d.data() })),
     calendars: cal.docs.map((d) => ({ uid: d.id, ...d.data() })),
+    events: evs.docs.map((d) => ({ id: d.id, ...d.data() })),
   };
+}
+
+/** グループ共有の予定を追加（メンバー全員に見える） */
+export async function addGroupEvent(gid, ev) {
+  await setDoc(doc(db, "groups", gid, "events", ev.id), ev);
+}
+
+/** グループ共有の予定を削除（作成者のみ。ルールで検証） */
+export async function deleteGroupEvent(gid, eventId) {
+  await deleteDoc(doc(db, "groups", gid, "events", eventId));
 }

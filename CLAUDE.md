@@ -139,15 +139,19 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 ### カレンダー共有
 - **閲覧リンク**：`shares/{shareId}` に `{owner, ownerName, updatedAt, items[]}` を保存。
   `?share=ID` で `SharedCalendarPage`（ログイン不要・読み取りは誰でも可＝IDが秘密）
-- **グループ**：`groups/{gid}`（name等）＋ `members/{uid}` ＋ `calendars/{uid}`。
+- **グループ**：`groups/{gid}`（name等）＋ `members/{uid}` ＋ `calendars/{uid}` ＋ `events/{eventId}`。
   `?group=ID` で `GroupCalendarPage`（要ログイン・メンバーのみ読める。メンバー色分け表示）
+- **グループ共有の予定**（`events`）：CalendarTabのグループ表示中に追加できる全員向け予定。
+  金色（GROUP_EV_COLOR）で表示、削除は作成者のみ（`createdBy === myUid` でUI制御＋ルールで強制）。
+  ドキュメント形：{ id, title, due, startTime, createdBy, createdByName, createdAt }
 - items は `App.jsx: calendarItems()` が生成（title/due/startTime/kind/done のみ。魚・メモは含めない）
 - 同期は保存エフェクト内（400msデバウンス＋JSON比較で変化時のみ書き込み）
 - 参加/作成/退出は⚙️設定のSettingsSheet。参加中リストは payload の `groups` に保持
 - ルーティングは `main.jsx` がURLクエリで分岐（アプリ本体を経由しない独立ページ）
 - **予定タブ内でもグループ表示可**：CalendarTab上部の切替チップで自分↔グループを選択。
-  グループ選択時は `loadGroupData` で全メンバーのカレンダーを読み、月グリッド＝色ドット・
-  選択日＝メンバー色つき一覧（閲覧のみ・編集UIは隠す）。`myUid` propで自分を判定
+  グループ選択時は `loadGroupData` で全メンバーのカレンダー＋グループ予定を読み、
+  上＝グループの予定入力＋他メンバー一覧（自分の分はライブの data.tasks から合成）、
+  下＝自分の編集エリア（常時表示・追加すると自動でグループにも共有）。`myUid`/`myName` propで自分を判定
 - 予定の「終日」：CalendarTabの `evAllday` トグル。ONで時刻入力を隠し startTime:null で保存
 
 ### セキュリティルール

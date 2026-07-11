@@ -168,7 +168,7 @@ export function SharedCalendarPage({ shareId }) {
 /* ================= グループカレンダー（メンバー同士で見せ合う） ================= */
 export function GroupCalendarPage({ groupId }) {
   const [authUser, setAuthUser] = useState(undefined); // undefined=確認中 / null=未ログイン
-  const [g, setG] = useState({ loading: true, notFound: false, notMember: false, group: null, calendars: [] });
+  const [g, setG] = useState({ loading: true, notFound: false, notMember: false, group: null, calendars: [], events: [] });
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(todayStr());
 
@@ -185,7 +185,7 @@ export function GroupCalendarPage({ groupId }) {
         // uid順で色を固定
         const cals = [...d.calendars].sort((a, b) => a.uid.localeCompare(b.uid))
           .map((c, i) => ({ ...c, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }));
-        setG({ loading: false, notFound: false, notMember: false, group: d.group, calendars: cals });
+        setG({ loading: false, notFound: false, notMember: false, group: d.group, calendars: cals, events: d.events || [] });
       })
       .catch(() => setG((s) => ({ ...s, loading: false, notMember: true })));
   }, [authUser, groupId]);
@@ -198,9 +198,12 @@ export function GroupCalendarPage({ groupId }) {
 
   const move = (n) => { const c = new Date(cursor); c.setMonth(c.getMonth() + n); setCursor(c); };
 
-  // その日の全メンバーの項目（メンバー情報つき）
+  // その日の全メンバーの項目（メンバー情報つき）＋グループ共有の予定（金色）
   const itemsOn = (key) => {
     const out = [];
+    (g.events || []).forEach((ev) => {
+      if (ev.due === key) out.push({ ...ev, kind: "event", member: `👥${ev.createdByName || ""}`, color: "#B8860B" });
+    });
     g.calendars.forEach((c) => {
       (c.items || []).forEach((it) => {
         if (it.due === key) out.push({ ...it, member: c.name || "メンバー", color: c.color });
