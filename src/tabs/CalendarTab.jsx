@@ -43,12 +43,20 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
       .filter((t) => t.due === key && t.kind === "event")
       .sort((a, b) => (a.startTime || "99:99").localeCompare(b.startTime || "99:99"));
 
-  // グループ表示：全メンバーの項目をその日ぶん集約（色・名前つき）
+  // グループ表示：メンバーの項目をその日ぶん集約（色・名前つき）
+  // 自分の分はスナップショットではなくライブ data.tasks から（追加が即反映される）
+  const myColor = grp.calendars.find((c) => c.uid === myUid)?.color || MEMBER_COLORS[0];
   const groupItemsOn = (key) => {
     const out = [];
-    grp.calendars.forEach((c) => (c.items || []).forEach((it) => {
-      if (it.due === key) out.push({ ...it, member: c.name || "メンバー", color: c.color, isMe: c.uid === myUid });
-    }));
+    grp.calendars.forEach((c) => {
+      if (c.uid === myUid) return; // 自分は下でライブ反映
+      (c.items || []).forEach((it) => {
+        if (it.due === key) out.push({ ...it, member: c.name || "メンバー", color: c.color, isMe: false });
+      });
+    });
+    data.tasks.filter((t) => t.due === key).forEach((t) => {
+      out.push({ title: t.title, due: t.due, startTime: t.startTime || null, kind: t.kind === "event" ? "event" : "task", done: !!t.done, member: "自分", color: myColor, isMe: true });
+    });
     return out.sort((a, b) => (a.kind === "event" ? 0 : 1) - (b.kind === "event" ? 0 : 1) || (a.startTime || "99:99").localeCompare(b.startTime || "99:99"));
   };
 
@@ -215,14 +223,14 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
         )}
       </div>
 
-      {/* グループ表示中：選択日の みんなの予定（閲覧のみ） */}
+      {/* グループ表示中：選択日の 他メンバーの予定（閲覧のみ。自分の分は下の編集エリアに出る） */}
       {inGroup && !grp.loading && !grp.error && (
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>{selected.slice(5).replace("-", "/")} のみんなの予定</div>
-          {groupItemsOn(selected).length === 0 && (
-            <div className="wcard" style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, padding: 18, textAlign: "center", color: C.sub, fontSize: 13 }}>この日の予定はありません</div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>👥 {selected.slice(5).replace("-", "/")} の他メンバーの予定</div>
+          {groupItemsOn(selected).filter((it) => !it.isMe).length === 0 && (
+            <div className="wcard" style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, padding: 14, textAlign: "center", color: C.sub, fontSize: 12 }}>他のメンバーの予定はありません</div>
           )}
-          {groupItemsOn(selected).map((it, i) => (
+          {groupItemsOn(selected).filter((it) => !it.isMe).map((it, i) => (
             <div key={i} className="wcard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 6, background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, borderLeft: `4px solid ${it.color}` }}>
               {it.kind === "event" ? (
                 <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: it.startTime ? C.deepAqua : "#9AB4BC", borderRadius: 6, padding: "3px 7px", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{it.startTime || "終日"}</span>
@@ -231,14 +239,16 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
               )}
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: it.done ? "line-through" : "none", color: it.done ? C.sub : C.ink }}>{it.title}</span>
               {it.kind !== "event" && it.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}>⏰{it.startTime}</span>}
-              <span style={{ fontSize: 10, fontWeight: 800, color: it.color, flexShrink: 0 }}>{it.isMe ? "自分" : it.member}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: it.color, flexShrink: 0 }}>{it.member}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* ===== 自分のカレンダー（編集可）。グループ表示中は隠す ===== */}
-      {!inGroup && (
+      {/* ===== 自分のカレンダー（編集可）。グループ表示中でも自分の予定・タスクは追加できる ===== */}
+      {inGroup && (
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.deepAqua, marginBottom: 8 }}>🐟 自分の予定・タスク（追加するとグループにも共有されます）</div>
+      )}
       <>
       {/* この日の予定（時間の約束。開始5分前に通知） */}
       <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
@@ -344,7 +354,6 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid }) {
         <TaskRow key={t.id} t={t} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
       ))}
       </>
-      )}
     </div>
   );
 }
