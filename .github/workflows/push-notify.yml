@@ -16,7 +16,8 @@ jobs:
         with:
           node-version: 20
       - name: Install deps
-        run: npm install --no-save firebase-admin web-push
+        # web-push v4（2026-11-06公開）はdefault exportが無くなり send-push.mjs が動かないため v3 に固定
+        run: npm install --no-save firebase-admin@14 web-push@3
       - name: Send notifications
         run: node scripts/send-push.mjs
         env:
