@@ -202,7 +202,7 @@ GitHub Actions の Admin SDK はルールをバイパスする。
 
 **アプリを閉じていても届くWeb Push**：
 - 購読：`push.js enablePush()` → VAPID公開鍵で subscribe → Firestoreに保存。⚙️設定/タスクタブ/初回バナーから有効化
-- 受信：`sw.js` の push ハンドラ。**pushを受けたら必ず showNotification する**（iOSはサイレントpushが続くと購読を失効させる。スリープ中も visible と報告されることがある）。前面で操作中（client.focused）なら表示直後に close して二重表示を防ぐ
+- 受信：`sw.js` の push ハンドラ。**pushを受けたら必ず showNotification する**（iOSはサイレントpushが続くと購読を失効させる。スリープ中も visible と報告されることがある）。アプリ表示中でも消さずにそのまま表示する（多少の二重表示は許容）
 - 自己修復：`push.js resyncPush()` を起動時・アプリ復帰時（10分throttle）に実行し、購読が消えていれば再登録してFirestoreへ上書き保存
 - 送信：`.github/workflows/push-notify.yml` → `scripts/send-push.mjs`
   - **起動はcron-job.orgが担当**：GitHubのcron（*/5）は数時間飛ぶことがあり信頼できないため、

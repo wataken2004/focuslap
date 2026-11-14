@@ -1,4 +1,4 @@
-const CACHE = "focuslap-v3";
+const CACHE = "focuslap-v4";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(clients.claim()));
@@ -23,7 +23,7 @@ self.addEventListener("push", (e) => {
     try { data = e.data ? e.data.json() : {}; } catch { data = { body: e.data?.text() }; }
     // 重要：iPhoneでは push を受けたら必ず通知を表示しなければならない。
     // 表示しない（サイレント）pushが数回続くと、iOSが購読を取り消して以後一切届かなくなる。
-    // スリープ中もiOSは「アプリが表示中」と報告することがあるため、常に表示する。
+    // スリープ中もiOSは「アプリが表示中」と報告することがあるため、アプリを開いていても常に表示する。
     const tag = "focuslap-" + Date.now();
     await self.registration.showNotification(data.title || "FocusLap", {
       body: data.body || "",
@@ -33,12 +33,6 @@ self.addEventListener("push", (e) => {
       silent: false,              // 端末の通知音を鳴らす
       vibrate: [150, 80, 150],    // Androidはバイブも
     });
-    // アプリを前面で操作中（フォーカスあり）ならアプリ内通知と二重になるので、表示後すぐ消す
-    const cs = await clients.matchAll({ type: "window", includeUncontrolled: true });
-    if (cs.some((c) => c.focused)) {
-      const ns = await self.registration.getNotifications({ tag });
-      ns.forEach((n) => n.close());
-    }
   })());
 });
 
