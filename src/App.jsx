@@ -15,7 +15,7 @@ const GoalsTab    = lazy(() => import("./tabs/GoalsTab.jsx").then((m) => ({ defa
 const TankTab     = lazy(() => import("./tabs/TankTab.jsx").then((m) => ({ default: m.TankTab })));
 import { LoginScreen } from "./auth/LoginScreen.jsx";
 import { IconFocus, IconTasks, IconCal, IconGoals, IconTank } from "./icons.jsx";
-import { enablePush, disablePush } from "./push.js";
+import { enablePush, disablePush, resyncPush } from "./push.js";
 
 // アプリ内通知（許可済みのときだけ）
 const appNotify = (msg) => {
@@ -422,6 +422,23 @@ export default function FocusLapApp() {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return unsub;
   }, []);
+
+  // プッシュ通知の自己修復：起動時・アプリに戻った時に購読を確認し、消えていたら登録し直す
+  // （iOSは購読を黙って失効させることがあり、そのままだと「✓ 有効」表示のまま届かなくなる）
+  useEffect(() => {
+    if (!user?.uid) return;
+    let last = 0;
+    const check = async () => {
+      if (document.hidden || localStorage.getItem("focuslap:pushOn") !== "1") return;
+      if (Date.now() - last < 10 * 60000) return;
+      last = Date.now();
+      const ok = await resyncPush(user.uid);
+      if (!ok) localStorage.setItem("focuslap:pushOn", "0");
+    };
+    check();
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, [user?.uid]);
 
   // 画面が隠れている間は全アニメーションを停止（バッテリー節約）
   useEffect(() => {

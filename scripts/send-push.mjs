@@ -22,6 +22,7 @@ const nowMin = jst.getUTCHours() * 60 + jst.getUTCMinutes();
 
 const userRefs = await db.collection("users").listDocuments();
 let sentCount = 0;
+let subUsers = 0, subDevices = 0, pendingUsers = 0;
 
 for (const userRef of userRefs) {
   try {
@@ -33,6 +34,8 @@ for (const userRef of userRefs) {
     // この端末の購読情報
     const subsSnap = await userRef.collection("push").get();
     if (subsSnap.empty) continue;
+    subUsers++; subDevices += subsSnap.size;
+    if (d.pendingSession) pendingUsers++;
 
     // 送信済み管理（重複防止）
     const stateRef = userRef.collection("pushMeta").doc("state");
@@ -103,6 +106,7 @@ for (const userRef of userRefs) {
           sentCount++;
         } catch (e) {
           if (e.statusCode === 404 || e.statusCode === 410) {
+            console.log(`subscription expired (${e.statusCode}) -> deleted`);
             await subDoc.ref.delete();
             break;
           }
@@ -115,4 +119,4 @@ for (const userRef of userRefs) {
   }
 }
 
-console.log(`done: ${sentCount} notifications sent`);
+console.log(`done: ${sentCount} notifications sent / users with push: ${subUsers} (devices: ${subDevices}) / running timers: ${pendingUsers}`);
