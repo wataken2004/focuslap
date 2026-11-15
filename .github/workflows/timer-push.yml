@@ -1,0 +1,36 @@
+name: timer-push
+
+# タイマー開始時にアプリ（Vercelの api/schedule-push）から起動され、
+# 終了時刻まで待ってから「集中終了」通知をぴったりに送る
+on:
+  workflow_dispatch:
+    inputs:
+      uid:
+        required: true
+      endAt:
+        required: true
+
+# 同じユーザーが新しいタイマーを始めたら古い待機ジョブは止める
+concurrency:
+  group: timer-${{ inputs.uid }}
+  cancel-in-progress: true
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 250
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm install --no-save firebase-admin@13 web-push@3
+      - name: Wait and send
+        run: node scripts/timer-push.mjs
+        env:
+          UID: ${{ inputs.uid }}
+          END_AT: ${{ inputs.endAt }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}

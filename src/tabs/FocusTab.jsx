@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat, ProgressSheet } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
+import { scheduleTimerPush } from "../push.js";
 
 // 完了通知（許可済みのときだけ）
 const notify = (msg) => {
@@ -142,11 +143,12 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   }, [running]);
 
   // アプリを閉じていても「集中終了」をプッシュ通知できるよう、終了予定をデータに記録
-  // （GitHub Actionsが定期的にチェックして通知を送る）
+  // （終了時刻ぴったりに送るようサーバーへ予約。5分おきのチェックもバックアップで動く）
   useEffect(() => {
     if (running && mode === "work" && endAtRef.current) {
       const endAt = endAtRef.current;
       update((d) => { d.pendingSession = { endAt, minutes: settings.work }; return d; });
+      scheduleTimerPush(endAt);
     } else if (data.pendingSession) {
       update((d) => { delete d.pendingSession; return d; });
     }

@@ -64,7 +64,7 @@ PCの買い替え・故障に備えて、メモアプリ等に控えておく：
 - `.env.local` の中身（Firebase設定 6行＋`VITE_VAPID_PUBLIC_KEY`）
 - VAPID秘密鍵（GitHub Secrets の `VAPID_PRIVATE_KEY` に入れたもの）
 - Firebaseサービスアカウントの JSON（GitHub Secrets の `FIREBASE_SERVICE_ACCOUNT`）
-- GitHubトークン `github_pat_...`（cron-job.org のヘッダーに入れたもの）
+- GitHubトークン `github_pat_...`（cron-job.org のヘッダーと Vercel の `GH_DISPATCH_TOKEN` に入れたもの）
 
 ### 使っているアカウント
 
@@ -85,7 +85,8 @@ PCの買い替え・故障に備えて、メモアプリ等に控えておく：
    - 赤✗ → ログを開いてエラーを確認（Secretsの期限切れ等）
 2. スマホ側：⚙️設定 → 📲プッシュ通知が「✓ 有効」か確認（iPhoneはホーム画面に追加したアプリからのみ有効化できる）
 3. iPhoneのマナーモード中は音は鳴らない（表示とバイブのみ）
-4. 通知は最大5〜8分遅れる仕様（5分間隔のチェックのため）
+4. 集中終了の通知はほぼぴったり（数十秒以内）。開始時刻・期限リマインドは最大5〜8分遅れる仕様（5分間隔のチェックのため）
+5. 集中終了だけ来ない → Actionsに `timer-push` の実行があるか確認。無ければVercelの環境変数 `GH_DISPATCH_TOKEN` を確認
 
 ### アプリが真っ白・エラーになる
 - Vercelの Deployments で最新デプロイが緑か確認 → 赤なら直前の変更が原因。チャットで「デプロイが失敗してる」と伝えれば調査・修正できる

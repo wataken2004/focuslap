@@ -34,7 +34,7 @@ src/
   shared.test.js        # 上記コアロジックのvitest単体テスト（fishForMinutes/nextRepeatDate等）
   fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント）
   icons.jsx             # タブナビ用の海テイスト線画アイコン5種
-  push.js               # Web Push購読（enablePush / disablePush）
+  push.js               # Web Push購読（enablePush / disablePush / resyncPush / scheduleTimerPush）
   auth/LoginScreen.jsx  # Google / メール+パスワード ログイン・新規登録・再設定 / ゲスト選択
   tabs/
     FocusTab.jsx        # タイマー・魚獲得演出・離脱判定・手動記録・各モード設定
@@ -46,11 +46,15 @@ public/
   sw.js                 # Service Worker（キャッシュ＋push受信＋通知クリック）
   manifest.webmanifest  # PWAマニフェスト
   icon.svg / icon-{180,192,512}.png
+api/
+  schedule-push.js      # Vercel関数：集中終了pushの予約（timer-push.ymlを起動）
 scripts/
+  timer-push.mjs        # 終了時刻まで待って集中終了pushを送信
   send-push.mjs         # プッシュ通知送信（GitHub Actionsから実行）
   make-icons.mjs        # SVG→PNGアイコン生成
 .github/workflows/
   push-notify.yml       # 5分ごとの通知cron＋keepalive（公式API直呼び）
+  timer-push.yml        # 集中終了をぴったりに送る待機ジョブ（アプリから起動）
 ```
 
 ---
@@ -211,7 +215,12 @@ GitHub Actions の Admin SDK はルールをバイパスする。
   - ①開始時刻の10分前〜定刻 ②hourlyリマインド（8〜22時） ③pendingSession による集中終了通知（終了後3時間以内）
   - 重複防止は `pushMeta/state`、無効購読（404/410）は自動削除
   - keepaliveステップが公式API（workflow enable）で60日自動停止を防ぐ
-- **制約**：通知は最大5〜8分遅れる（5分間隔チェックのため）。iOSはホーム画面に追加したPWAのみpush可
+- **集中終了はぴったり送信**：タイマー開始時に `push.js scheduleTimerPush(endAt)` → Vercel関数 `api/schedule-push.js`
+  （FirebaseのIDトークンをREST accounts:lookupで検証してuid取得）→ `timer-push.yml` を workflow_dispatch（inputs: uid, endAt）
+  → `scripts/timer-push.mjs` が endAt+3秒まで待機し、`pendingSession.endAt` が一致する時だけ送信（アプリで終了/リセット済みならスキップ）。
+  送信済みキー `end:${endAt}` を5分チェックと共用して二重送信防止。concurrency（uidごと）で古い待機ジョブはキャンセル
+  - Vercel環境変数 `GH_DISPATCH_TOKEN`（fine-grained PAT・Actions: Read and write）が必要
+- **制約**：開始時刻/期限リマインドは最大5〜8分遅れる（5分間隔チェックのため）。iOSはホーム画面に追加したPWAのみpush可
 
 GitHub Secrets: `FIREBASE_SERVICE_ACCOUNT` / `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`
 

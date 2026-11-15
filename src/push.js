@@ -1,5 +1,5 @@
 // アプリを閉じていても届くプッシュ通知の購読処理（Web Push）
-import { isFirebaseConfigured, db } from "./firebase.js";
+import { isFirebaseConfigured, db, auth } from "./firebase.js";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY;
@@ -86,5 +86,26 @@ export async function disablePush(uid) {
   } catch (e) {
     console.error("push unsubscribe failed", e);
     return { ok: false };
+  }
+}
+
+/**
+ * 集中タイマー開始時に呼ぶ：終了ぴったりにプッシュ通知を送るようサーバーに予約する。
+ * （失敗しても5分おきのチェックがバックアップとして通知する）
+ */
+export async function scheduleTimerPush(endAt) {
+  try {
+    if (!isFirebaseConfigured || localStorage.getItem("focuslap:pushOn") !== "1") return;
+    const user = auth?.currentUser;
+    if (!user) return;
+    const idToken = await user.getIdToken();
+    await fetch("/api/schedule-push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken, endAt }),
+      keepalive: true,
+    });
+  } catch (e) {
+    console.error("schedule push failed", e);
   }
 }
