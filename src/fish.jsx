@@ -273,35 +273,49 @@ const BODIES = {
     </>
   ),
 
-  /* ---------------- アザラシ（ゴマフアザラシ） ---------------- */
-  "🦭": (u) => (
-    <>
-      <defs>
-        <VGrad id={`${u}b`} stops={[[0, "#9EAFBA"], [0.55, "#C7D3DA"], [1, "#EEF3F6"]]} />
-        <clipPath id={`${u}c`}><path d="M16 40 C16 26 32 22 50 28 C70 30 90 36 98 46 C92 56 72 62 50 60 C30 60 16 54 16 40 Z" /></clipPath>
-      </defs>
-      {/* 後ろびれ */}
-      <path d="M94 46 C102 40 110 36 116 36 C112 44 112 48 116 56 C108 56 100 52 94 50 Z" fill="#8A9CA8" />
-      {/* 胴 */}
-      <path d="M16 40 C16 26 32 22 50 28 C70 30 90 36 98 46 C92 56 72 62 50 60 C30 60 16 54 16 40 Z" fill={`url(#${u}b)`} />
-      <g clipPath={`url(#${u}c)`}>
-        {[[48, 32], [58, 36], [68, 34], [76, 40], [56, 44], [86, 44], [42, 40], [66, 46], [78, 50]].map(([x, y], i) => (
-          <ellipse key={i} cx={x} cy={y} rx="1.8" ry="1.3" fill="#5D6E7A" opacity="0.55" />
-        ))}
-      </g>
-      {/* 前びれ */}
-      <path d="M40 54 C42 62 48 66 54 66 C52 60 50 56 50 54 Z" fill="#8A9CA8" />
-      {/* 顔 */}
-      <Eye x={26} y={34} r={4.4} iris="#141A20" />
-      <Eye x={36} y={33} r={3.4} iris="#141A20" />
-      <ellipse cx="18" cy="41" rx="3" ry="2.2" fill="#3A444C" />
-      <path d="M20 45 Q23 47 26 45" stroke="#5D6E7A" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-      <g stroke="#E8EEF1" strokeWidth="0.9" strokeLinecap="round" opacity="0.9">
-        <path d="M14 43 L4 41" /><path d="M14 45 L5 46" /><path d="M24 43 L33 41" /><path d="M24 45 L33 46" />
-      </g>
-      <Sheen d="M30 27 Q50 24 72 32" />
-    </>
-  ),
+  /* ---------------- アザラシ（ゴマフアザラシ・ころんとした横向き） ---------------- */
+  "🦭": (u) => {
+    const body = "M10 38 C10 24 22 18 34 21 C48 24 66 28 80 36 C88 41 92 46 92 50 C92 56 84 60 70 61 C52 62 32 62 22 58 C14 55 10 48 10 38 Z";
+    return (
+      <>
+        <defs>
+          <VGrad id={`${u}b`} stops={[[0, "#93A7B4"], [0.5, "#C2CFD8"], [1, "#F1F5F8"]]} />
+          <clipPath id={`${u}c`}><path d={body} /></clipPath>
+        </defs>
+        {/* 後ろあし（水かきのある2枚のひれ。尾びれではなく丸い扇形） */}
+        <path d="M88 47 C96 40 104 36 112 36 C113 40 111 44 106 47 C102 49 96 50 90 50 Z" fill="#7F93A0" />
+        <path d="M88 52 C96 56 104 62 111 64 C113 60 111 56 106 54 C102 52 96 51 90 51 Z" fill="#71858F" />
+        <g stroke="#5E717C" strokeWidth="0.9" strokeLinecap="round" opacity="0.75">
+          <path d="M95 46 L109 38.5" /><path d="M95 48 L110 42.5" />
+          <path d="M95 53 L109 61" /><path d="M95 52 L110 57.5" />
+        </g>
+        {/* 胴（ぽってり） */}
+        <path d={body} fill={`url(#${u}b)`} />
+        <g clipPath={`url(#${u}c)`}>
+          {[[42, 27, 2], [52, 30, 1.5], [60, 31, 2], [70, 35, 1.5], [78, 40, 1.8], [48, 37, 1.4], [58, 40, 1.8], [66, 44, 1.4], [84, 46, 1.4], [38, 33, 1.3], [30, 25, 1.4]].map(([x, y, r], i) => (
+            <ellipse key={i} cx={x} cy={y} rx={r} ry={r * 0.72} fill="#5F7280" opacity="0.5" />
+          ))}
+          <path d="M14 52 C30 60 60 62 90 56" stroke="#FFFFFF" strokeWidth="7" fill="none" opacity="0.4" strokeLinecap="round" />
+        </g>
+        {/* 前あし（小さく丸い） */}
+        <path d="M30 52 C30 60 34 66 40 68 C42 66 42 60 40 54 Z" fill="#8597A3" />
+        {/* 顔：ふっくらした口元＋鼻の穴＋ひげ */}
+        <ellipse cx="14" cy="40" rx="7.5" ry="6" fill="#DCE5EA" />
+        <ellipse cx="8.2" cy="37.6" rx="1.3" ry="1" fill="#2C353C" transform="rotate(-25 8.2 37.6)" />
+        <ellipse cx="11" cy="36.4" rx="1.3" ry="1" fill="#2C353C" transform="rotate(-10 11 36.4)" />
+        <path d="M9 43.5 Q12.5 46 16 43.5" stroke="#6E808C" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+        {[[13.5, 40], [16, 41.5], [13.5, 42.5], [17, 39.5]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.55" fill="#6E808C" />)}
+        <g stroke="#FFFFFF" strokeWidth="0.9" strokeLinecap="round" opacity="0.95">
+          <path d="M12 41 L1 38" /><path d="M12 42.5 L0.5 43" /><path d="M13 44 L2 48" />
+        </g>
+        {/* 目（横顔なので1つ・うるうる） */}
+        <circle cx="25" cy="32" r="4.8" fill="#141A20" />
+        <circle cx="23.5" cy="30.4" r="1.7" fill="#FFFFFF" />
+        <circle cx="26.4" cy="33.8" r="0.7" fill="#FFFFFF" opacity="0.8" />
+        <Sheen d="M28 23 Q50 24 74 32" />
+      </>
+    );
+  },
 
   /* ---------------- クジラ（ザトウクジラ風） ---------------- */
   "🐳": (u) => (
