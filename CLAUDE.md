@@ -32,7 +32,9 @@ src/
   storage.js            # Firestore or localStorage の透過ラッパー
   shared.jsx            # デザイントークン・FISHES・日付/繰り返しヘルパー・TaskForm/TaskRow等
   shared.test.js        # 上記コアロジックのvitest単体テスト（fishForMinutes/nextRepeatDate等）
-  fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント）
+  fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント・海中イラスト調）
+  glyphs.jsx            # 絵文字の代わりのオリジナル図柄 <G n> と水槽の飾り（Coral/Kelp/Shell）
+  theme.css             # フォント・背景・カード等の全体テーマ
   icons.jsx             # タブナビ用の海テイスト線画アイコン5種
   push.js               # Web Push購読（enablePush / disablePush / resyncPush / scheduleTimerPush）
   auth/LoginScreen.jsx  # Google / メール+パスワード ログイン・新規登録・再設定 / ゲスト選択
@@ -228,18 +230,29 @@ GitHub Secrets: `FIREBASE_SERVICE_ACCOUNT` / `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE
 
 ## デザイン
 
+### テーマ（`src/theme.css`）＝「水族館の観察窓」
+- 文字：**Zen Maru Gothic**（本文・見出し）＋ 数字は **Fredoka**（`.num` クラス）。@fontsource で同梱（オフラインでも表示）
+- 背景は水面（明）→深場（青緑）の深度グラデーション。ヘッダー下の波線＝水面（ヘッダーは水上）
+- `.wcard`＝ガラスの水槽パネル、`.dpanel`＝深場パネル（どちらも theme.css で定義）
+- **主役はタイマーの舷窓**（FocusTab `Porthole`）：リベット付きの丸窓。集中すると水位が上がり（休憩は下がる）、魚が泳ぐ
+- **絵文字は使わない**：画面上のアイコンは `src/glyphs.jsx` の `<G n="..." />`（線画＋泡）。海のモチーフで統一
+  （目標＝灯台 goal / 仕事＝舵輪 work / グループ＝魚の群れ school / 共有＝ボトルメール share / 図鑑＝魚の本 book / たまご＝魚卵 roe）。
+  水槽の飾りは `Coral` / `Kelp` / `Shell`。`<option>`・`placeholder`・OS通知・document.title など文字しか置けない所は絵文字なしの文言にする
+- 魚（fish.jsx）は海中イラスト調：背が濃く腹が明るいグラデ＋半透明ヒレ＋ひれすじ＋瞳の映り込み。グラデIDは useId で一意化
+- アプリアイコン（public/icon*）とタブナビのアイコン（icons.jsx）は従来のまま
+
 ### トークン（`shared.jsx: C`）
 | 変数 | 値 | 用途 |
 |---|---|---|
-| ink | #0A2238 | 本文 |
-| aqua | #14A3A1 | アクセント |
-| deepAqua | #0E7C7B | 強調・アクティブ |
-| yellow | #F5BE3D | 達成・バッジ |
-| deck | #F2F7F7 | （旧背景・現在はグラデ） |
+| ink | #0B2A3C | 本文 |
+| aqua | #22A6A0 | アクセント |
+| deepAqua | #0D6F73 | 強調・アクティブ |
+| yellow | #F2B84B | 達成・バッジ |
+| deck | #E4F3EF | 読み込み画面などの背景 |
 | card | #FFFFFF | カード |
-| line | #DCE8E8 | ボーダー |
-| sub | #5B7283 | サブテキスト |
-| red | #E05B5B | 警告・期限超過 |
+| line | #D3E6E4 | ボーダー |
+| sub | #58717F | サブテキスト |
+| red | #E0605A | 警告・期限超過 |
 
 ### 水中の世界観
 - 背景：水面→深海のグラデーション＋ゆっくり浮かぶ泡（floatUp、fixed・pointerEvents:none）

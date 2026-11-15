@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { C, fmt, todayStr, addDays, uid, TaskRow, TaskForm } from "../shared.jsx";
 import { loadGroupData, addGroupEvent, deleteGroupEvent } from "../storage.js";
+import { G } from "../glyphs.jsx";
 
 // グループ表示のメンバー色（uid順で割り当て）
 const MEMBER_COLORS = ["#0E7C7B", "#3A6EA5", "#B4762F", "#7B5EA7", "#C05B7A", "#4A8A58", "#5B7283"];
@@ -89,7 +90,7 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
     const out = [];
     // グループ共有の予定（金色・全員に見える）
     grp.events.forEach((ev) => {
-      if (ev.due === key) out.push({ ...ev, kind: "event", member: `👥${ev.createdByName || ""}`, color: GROUP_EV_COLOR, isMe: false, isGroupEv: true });
+      if (ev.due === key) out.push({ ...ev, kind: "event", member: `共有・${ev.createdByName || ""}`, color: GROUP_EV_COLOR, isMe: false, isGroupEv: true });
     });
     grp.calendars.forEach((c) => {
       if (c.uid === myUid) return; // 自分は下でライブ反映
@@ -191,12 +192,12 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
         <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto", paddingBottom: 2 }}>
           <button onClick={() => setViewGroup(null)}
             style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${!inGroup ? C.deepAqua : C.line}`, background: !inGroup ? C.deepAqua : C.card, color: !inGroup ? "#fff" : C.sub, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-            🐟 自分
+            <G n="fish" size={13} /> 自分
           </button>
           {groups.map((g) => (
             <button key={g.id} onClick={() => setViewGroup(g.id)}
               style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${viewGroup === g.id ? C.deepAqua : C.line}`, background: viewGroup === g.id ? C.deepAqua : C.card, color: viewGroup === g.id ? "#fff" : C.sub, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-              👥 {g.name}
+              <G n="school" size={13} /> {g.name}
             </button>
           ))}
         </div>
@@ -270,7 +271,7 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
       {inGroup && !grp.loading && !grp.error && (
         <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 8 }}>
-            👥 {selected.slice(5).replace("-", "/")} のグループの予定
+            <G n="school" size={14} /> {selected.slice(5).replace("-", "/")} のグループの予定
             <span style={{ fontSize: 10, fontWeight: 600, color: C.sub, marginLeft: 6 }}>ここに追加するとメンバー全員に表示</span>
           </div>
 
@@ -298,10 +299,10 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
               {it.kind === "event" ? (
                 <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: it.startTime ? (it.isGroupEv ? GROUP_EV_COLOR : C.deepAqua) : "#9AB4BC", borderRadius: 6, padding: "3px 7px", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{it.startTime || "終日"}</span>
               ) : (
-                <span style={{ fontSize: 13, flexShrink: 0 }}>{it.done ? "✅" : "☐"}</span>
+                <span style={{ flexShrink: 0, color: it.done ? C.aqua : "#B8CDD0", lineHeight: 0 }}><G n={it.done ? "done" : "todo"} size={15} /></span>
               )}
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: it.done ? "line-through" : "none", color: it.done ? C.sub : C.ink }}>{it.title}</span>
-              {it.kind !== "event" && it.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}>⏰{it.startTime}</span>}
+              {it.kind !== "event" && it.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}><G n="alarm" size={10} /> {it.startTime}</span>}
               <span style={{ fontSize: 10, fontWeight: 800, color: it.color, flexShrink: 0 }}>{it.member}</span>
               {it.isGroupEv && it.createdBy === myUid && (
                 <button onClick={() => removeGroupEv(it)}
@@ -314,13 +315,13 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
 
       {/* ===== 自分のカレンダー（編集可）。グループ表示中でも自分の予定・タスクは追加できる ===== */}
       {inGroup && (
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.deepAqua, marginBottom: 8 }}>🐟 自分の予定・タスク（追加するとグループにも共有されます）</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.deepAqua, marginBottom: 8 }}><G n="fish" size={13} /> 自分の予定・タスク（追加するとグループにも共有されます）</div>
       )}
       <>
       {/* この日の予定（時間の約束。開始5分前に通知） */}
       <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 8 }}>
-          🕐 {selected.slice(5).replace("-", "/")} の予定
+          <G n="clock" size={14} /> {selected.slice(5).replace("-", "/")} の予定
           <span style={{ fontSize: 10, fontWeight: 600, color: C.sub, marginLeft: 6 }}>授業・バイト・約束など（開始5分前に通知）</span>
         </div>
 
@@ -374,7 +375,7 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
       <div className="wcard" style={{ background: C.card, border: `1px solid ${assignId ? C.aqua : C.line}`, borderRadius: 12, padding: 10, marginBottom: 12 }}>
         <select value={assignId} onChange={(e) => setAssignId(e.target.value)}
           style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", fontSize: 12, color: assignId ? C.ink : C.sub }}>
-          <option value="">📌 既存タスクをこの日（{selected.slice(5).replace("-", "/")}）に割り振る…</option>
+          <option value="">既存タスクをこの日（{selected.slice(5).replace("-", "/")}）に割り振る…</option>
           {assignableTasks.map((t) => (
             <option key={t.id} value={t.id}>{t.title}{t.due ? `（現在: ${t.due}）` : "（期限なし）"}</option>
           ))}
@@ -407,7 +408,7 @@ export function CalendarTab({ data, update, growthOf, onFocus, myUid, myName }) 
               </button>
             </div>
             <div style={{ fontSize: 10, color: C.sub, marginTop: 6 }}>
-              移動＝予定をこの日へ動かす ／ コピー＝元の日は残してこの日にも置く。開始時刻は割り振り後に✎編集で設定できます
+              移動＝予定をこの日へ動かす ／ コピー＝元の日は残してこの日にも置く。開始時刻は割り振り後に鉛筆ボタンで設定できます
             </div>
           </>
         )}

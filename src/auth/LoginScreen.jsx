@@ -8,6 +8,7 @@ import {
 import { auth, googleProvider, isFirebaseConfigured } from "../firebase.js";
 import { C } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
+import { G } from "../glyphs.jsx";
 
 const AUTH_ERRORS = {
   "auth/invalid-email": "メールアドレスの形式が正しくありません。",
@@ -21,10 +22,10 @@ const AUTH_ERRORS = {
 
 // アプリ紹介（未獲得のレア魚はここでも明かさない）
 const FEATURES = [
-  { icon: "⏱", title: "集中した時間で魚をゲット", desc: "5分のシャボン玉から、長く集中するほどレアな魚まで全11種類。図鑑コンプを目指そう" },
-  { icon: "🐠", title: "サボると魚が逃げる", desc: "集中中に1分以上アプリを離れると魚が逃げてしまう。ゲーム感覚でスマホ断ち" },
-  { icon: "📊", title: "積み上げが目に見える", desc: "目標ごとの集中時間・タスクの進捗％・振り返りメモ。勉強も仕事もこれ1つで管理" },
-  { icon: "📲", title: "通知でリマインド", desc: "タスクの開始前・集中終了・期限切れをお知らせ。アプリを閉じていても届く" },
+  { icon: "timer", title: "集中した時間で魚をゲット", desc: "5分のシャボン玉から、長く集中するほどレアな魚まで全11種類。図鑑コンプを目指そう" },
+  { icon: "escape", title: "サボると魚が逃げる", desc: "集中中に1分以上アプリを離れると魚が逃げてしまう。ゲーム感覚でスマホ断ち" },
+  { icon: "chart", title: "積み上げが目に見える", desc: "目標ごとの集中時間・タスクの進捗％・振り返りメモ。勉強も仕事もこれ1つで管理" },
+  { icon: "push", title: "通知でリマインド", desc: "タスクの開始前・集中終了・期限切れをお知らせ。アプリを閉じていても届く" },
 ];
 
 export function LoginScreen({ onGuestLogin }) {
@@ -84,7 +85,6 @@ export function LoginScreen({ onGuestLogin }) {
     <div style={{
       minHeight: "100vh",
       background: "linear-gradient(180deg,#12507E 0%,#0E3A60 34%,#0B2C4C 68%,#081E33 100%)",
-      fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",
       position: "relative", overflow: "hidden",
     }}>
       <style>{`
@@ -136,7 +136,7 @@ export function LoginScreen({ onGuestLogin }) {
               borderRadius: 14, padding: "12px 14px",
               backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
             }}>
-              <div style={{ fontSize: 22, lineHeight: 1, marginTop: 2 }}>{f.icon}</div>
+              <div style={{ lineHeight: 0, marginTop: 1, color: "#7FD6D4", flexShrink: 0 }}><G n={f.icon} size={24} /></div>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: "#fff" }}>{f.title}</div>
                 <div style={{ fontSize: 12, color: "#A8CBD4", marginTop: 3, lineHeight: 1.6 }}>{f.desc}</div>
@@ -195,7 +195,7 @@ export function LoginScreen({ onGuestLogin }) {
             </>
           ) : (
             <div style={{ fontSize: 12, color: C.sub, background: "#FFF8E6", border: `1px solid #F5BE3D`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              ⚠️ Firebase未設定のため、ログインは利用できません。
+              <G n="warn" size={14} /> Firebase未設定のため、ログインは利用できません。
             </div>
           )}
 
@@ -203,7 +203,7 @@ export function LoginScreen({ onGuestLogin }) {
 
           <button onClick={onGuestLogin}
             style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px solid ${C.line}`, background: "transparent", color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            🐟 まずはゲストで試してみる（登録なし）
+            <G n="fish" size={15} /> まずはゲストで試してみる（登録なし）
           </button>
 
           {error && <div style={{ marginTop: 12, fontSize: 12, color: C.red, textAlign: "center" }}>{error}</div>}

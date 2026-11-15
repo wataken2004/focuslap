@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat, ProgressSheet } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
 import { scheduleTimerPush } from "../push.js";
+import { G, Coral, Kelp } from "../glyphs.jsx";
 
 // 完了通知（許可済みのときだけ）
 const notify = (msg) => {
@@ -95,10 +96,61 @@ function Celebration({ fish, name, count, onClose }) {
             <FishSVG type={fish} size={130} />
           </div>
         </div>
-        <div style={{ marginTop: 16, fontSize: 12, letterSpacing: ".3em", color: "#F5BE3D", fontWeight: 800 }}>NEW CATCH!</div>
+        <div style={{ marginTop: 16, fontSize: 12, letterSpacing: ".1em", color: "#F5BE3D", fontWeight: 900 }}>つかまえた！</div>
         <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", marginTop: 4 }}>{name}を獲得！</div>
         <div style={{ fontSize: 13, color: "#9FD9D8", marginTop: 6 }}>通算 {count} 匹目</div>
         <div style={{ fontSize: 11, color: "#7593A8", marginTop: 16 }}>タップで閉じる</div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ---- 舷窓（まるい観察窓）：集中するほど水位が上がり、魚が泳ぐ ---- */
+function Porthole({ level, fish, owned, fishSize = 64, glow, banner, children }) {
+  const lv = Math.max(0, Math.min(1, level));
+  const rivets = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * Math.PI * 2;
+    return { x: 50 + Math.cos(a) * 46.2, y: 50 + Math.sin(a) * 46.2 };
+  });
+  const wave = "M0 8 Q 25 0 50 8 T 100 8 T 150 8 T 200 8 V 40 H 0 Z";
+  return (
+    <div style={{ position: "relative", width: "min(76vw, 264px)", aspectRatio: "1", margin: "4px auto 16px" }}>
+      {/* 縁（リング＋リベット） */}
+      <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 32% 26%, #3FA7A9 0%, #1A6670 45%, #0B3E48 100%)", boxShadow: "0 14px 30px rgba(0,0,0,0.38), inset 0 2px 0 rgba(255,255,255,0.28), inset 0 -3px 6px rgba(0,0,0,0.3)" }} />
+      {rivets.map((r, i) => (
+        <div key={i} style={{ position: "absolute", left: `${r.x}%`, top: `${r.y}%`, width: 7, height: 7, marginLeft: -3.5, marginTop: -3.5, borderRadius: 999, background: "radial-gradient(circle at 35% 35%, #CFF3EE, #4C9DA0 70%)", boxShadow: "0 1px 1px rgba(0,0,0,0.35)" }} />
+      ))}
+      {/* ガラス窓 */}
+      <div style={{ position: "absolute", inset: "9%", borderRadius: "50%", overflow: "hidden", background: "radial-gradient(circle at 50% 30%, #12456B 0%, #0A2A45 60%, #061A2D 100%)", boxShadow: "inset 0 0 0 3px rgba(127,214,212,0.35), inset 0 12px 28px rgba(0,0,0,0.55)" }}>
+        {/* 水 */}
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: `${(lv * 100).toFixed(1)}%`, transition: "height 1s linear" }}>
+          <svg viewBox="0 0 200 40" preserveAspectRatio="none" style={{ position: "absolute", top: -9, left: 0, width: "200%", height: 18, animation: "waveSlide 6s linear infinite" }}>
+            <path d={wave} fill="#1E8E95" opacity="0.95" />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#1E8E95 0%,#126A78 55%,#0B4B5E 100%)" }} />
+          {[18, 42, 66, 82].map((x, i) => (
+            <div key={i} style={{ position: "absolute", left: `${x}%`, bottom: 0, width: 5 + (i % 2) * 3, height: 5 + (i % 2) * 3, borderRadius: 999, border: "1.2px solid rgba(255,255,255,0.55)", animation: `bubble ${3 + i}s linear infinite`, animationDelay: `${i * 0.8}s` }} />
+          ))}
+        </div>
+        {/* 砂と飾り */}
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "11%", background: "linear-gradient(180deg,#E3C98E,#C9AC6C)" }} />
+        <Coral size={34} style={{ position: "absolute", bottom: "6%", left: "16%" }} />
+        <Kelp size={38} style={{ position: "absolute", bottom: "6%", right: "14%" }} />
+        {/* 魚 */}
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: `${Math.max(14, lv * 100 - 34).toFixed(1)}%`, display: "flex", justifyContent: "center", transition: "bottom 1s linear", filter: glow ? "drop-shadow(0 0 10px #F2B84B)" : "none" }}>
+          <div style={{ animation: "drift 9s ease-in-out infinite" }}>
+            <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
+              <FishSVG type={fish} size={fishSize}
+                style={owned ? undefined : { filter: "grayscale(1) brightness(0) invert(0.45)", opacity: 0.85 }} />
+            </div>
+          </div>
+        </div>
+        {/* 数字（窓の上部に） */}
+        <div style={{ position: "absolute", left: 0, right: 0, top: "20%", textAlign: "center", pointerEvents: "none" }}>{children}</div>
+        {banner && <div style={{ position: "absolute", top: "8%", left: 0, right: 0, fontSize: 11, color: banner.color, fontWeight: 800 }}>{banner.text}</div>}
+        {/* ガラスの映り込み */}
+        <div style={{ position: "absolute", top: "7%", left: "12%", width: "34%", height: "20%", borderRadius: "50%", borderTop: "3px solid rgba(255,255,255,0.35)", transform: "rotate(-28deg)", pointerEvents: "none" }} />
       </div>
     </div>
   );
@@ -172,7 +224,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         setRunning(false);
         setSecs(settings.work * 60);
         update((d) => { if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); } d.escapes += 1; return d; });
-        flash("💨 1分以上アプリを離れたため魚が逃げてしまった…", "#FF9B9B");
+        flash("1分以上アプリを離れたため魚が逃げてしまった…", "#FF9B9B");
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -250,7 +302,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const reset = (m = mode, workMin = settings.work) => {
     if (mode === "work" && secs < total && secs > 0 && running) {
       update((d) => { if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); } d.escapes += 1; return d; });
-      flash("💨 集中を中断…魚が逃げてしまった", C.red);
+      flash("集中を中断…魚が逃げてしまった", C.red);
     }
     clearInterval(ref.current);
     setRunning(false);
@@ -299,7 +351,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const resetStopwatch = () => {
     if (swElapsed > 60) {
       update((d) => { if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); } d.escapes += 1; return d; });
-      flash("💨 計測を破棄…魚が逃げてしまった", "#FF9B9B");
+      flash("計測を破棄…魚が逃げてしまった", "#FF9B9B");
     }
     setSwRunning(false);
     setSwElapsed(0);
@@ -373,12 +425,12 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, fontSize: 14, color: C.ink, marginBottom: 8 }}>
         <option value="">— 取り組むタスクを選ぶ —</option>
         {dueToday.length > 0 && (
-          <optgroup label="📅 今日やる">
+          <optgroup label="今日やる">
             {dueToday.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
           </optgroup>
         )}
         {groupedTasks.map(({ g, ts }) => (
-          <optgroup key={g.id} label={`${g.type === "work" ? "💼" : "🎯"} ${g.title}`}>
+          <optgroup key={g.id} label={`${g.type === "work" ? "［仕事］" : "［目標］"}${g.title}`}>
             {ts.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
           </optgroup>
         ))}
@@ -392,7 +444,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       {/* 前回の進捗・引き継ぎメモ（続きから取り組むため） */}
       {task && (task.progress || task.progressNote) && (
         <div style={{ background: "#F0FAFA", border: `1px solid ${C.line}`, borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: C.deepAqua }}>📊 前回の続き：{task.progress || 0}%</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: C.deepAqua }}><G n="chart" size={12} /> 前回の続き：{task.progress || 0}%</div>
           {task.progressNote && <div style={{ fontSize: 12, color: C.ink, marginTop: 3, whiteSpace: "pre-wrap" }}>{task.progressNote}</div>}
         </div>
       )}
@@ -401,7 +453,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       {task && (
         <input value={task.note || ""}
           onChange={(e) => { const v = e.target.value; update((d) => { const x = d.tasks.find((x) => x.id === task.id); if (x) x.note = v; return d; }); }}
-          placeholder="✏️ 今回やることメモ（任意）例：CH3の問題演習"
+          placeholder="今回やることメモ（任意）例：CH3の問題演習"
           style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: `1px dashed ${C.line}`, fontSize: 12, marginBottom: 8, background: "#FBFEFE" }} />
       )}
 
@@ -417,7 +469,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
       {/* タイマー種別切替 */}
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        {[["timer", "⏱ ポモドーロ"], ["stopwatch", "⏲ ストップウォッチ"]].map(([k, l]) => (
+        {[["timer", <><G n="timer" size={15} /> ポモドーロ</>], ["stopwatch", <><G n="stopwatch" size={15} /> ストップウォッチ</>]].map(([k, l]) => (
           <button key={k}
             onClick={() => {
               if (running || swRunning) { flash("実行中は切り替えできません", "#FF9B9B"); return; }
@@ -431,34 +483,17 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
       {timerKind === "stopwatch" ? (
         /* ===== ストップウォッチパネル ===== */
-        <div className="dpanel" style={{ background: "linear-gradient(180deg,#0F3F63 0%,#0A2238 78%,#081B2E 100%)", borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.2em", color: "#7FD6D4", fontWeight: 700 }}>
-            STOPWATCH — 勉強した時間をそのまま記録
-          </div>
-          <div style={{ fontSize: 54, fontWeight: 800, fontVariantNumeric: "tabular-nums", margin: "4px 0 8px" }}>
-            {swH > 0 ? `${swH}:` : ""}{swM}:{swS}
-          </div>
+        <div className="dpanel" style={{ background: "linear-gradient(180deg,#0E4A5E 0%,#08304A 55%,#062236 100%)", borderRadius: 28, padding: "18px 18px 20px", color: "#fff", textAlign: "center" }}>
+          <div style={{ fontSize: 12, color: "#7FD6D4", fontWeight: 700 }}>勉強した時間をそのまま記録</div>
+          <Porthole level={0.12 + Math.min(swElapsed / 7200, 1) * 0.8} fish={swFish.e} owned={swOwned} fishSize={64} banner={banner}>
+            <div className="num" style={{ fontSize: 46, color: "#fff", textShadow: "0 2px 10px rgba(0,0,0,0.45)" }}>
+              {swH > 0 ? `${swH}:` : ""}{swM}:{swS}
+            </div>
+          </Porthole>
           <div style={{ fontSize: 12, color: "#9FD9D8", marginBottom: 12 }}>
             {swElapsed >= 300
-              ? <>いま終了すると獲得：{swOwned ? <>{swFish.e} <strong>{swFish.name}</strong></> : <strong>？？？（おたのしみ）</strong>}</>
+              ? <>いま終了すると獲得：{swOwned ? <strong>{swFish.name}</strong> : <strong>？？？（おたのしみ）</strong>}</>
               : "5分以上の計測で魚を獲得できます"}
-          </div>
-
-          {/* ミニ水槽 */}
-          <div style={{ position: "relative", height: 100, borderRadius: 16, background: "linear-gradient(180deg,#155A8A 0%,#0E3A60 60%,#0B2C4C 100%)", overflow: "hidden", marginBottom: 14 }}>
-            {[14, 38, 70, 88].map((x, i) => (
-              <div key={i} style={{ position: "absolute", left: `${x}%`, bottom: 0, width: 6, height: 6, borderRadius: 999, background: "rgba(255,255,255,0.35)", animation: `bubble ${3 + i}s linear infinite`, animationDelay: `${i * 0.9}s` }} />
-            ))}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 14, background: "#C9B07A", opacity: 0.85 }} />
-            <div style={{ position: "absolute", bottom: 6, left: 14, fontSize: 18 }}>🪸</div>
-            <div style={{ position: "absolute", bottom: 6, right: 18, fontSize: 16 }}>🌿</div>
-            <div style={{ position: "absolute", top: 24, left: "40%" }}>
-              <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
-                <FishSVG type={swFish.e} size={44}
-                  style={{ transform: "scaleX(-1)", ...(swOwned ? {} : { filter: "grayscale(1) brightness(0) invert(0.45)", opacity: 0.85 }) }} />
-              </div>
-            </div>
-            {banner && <div style={{ position: "absolute", top: 6, left: 0, right: 0, fontSize: 11, color: banner.color, fontWeight: 800 }}>{banner.text}</div>}
           </div>
 
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
@@ -468,7 +503,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             </button>
             <button onClick={finishStopwatch}
               style={{ padding: "13px 14px", borderRadius: 14, border: "none", background: swElapsed >= 300 ? C.yellow : "rgba(255,255,255,0.15)", color: swElapsed >= 300 ? C.ink : "#9FD9D8", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
-              ✔ 終了して記録
+              <G n="check" size={14} /> 終了して記録
             </button>
             <button onClick={resetStopwatch}
               style={{ padding: "13px 12px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#fff", cursor: "pointer", fontSize: 13 }}>
@@ -480,49 +515,22 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
           </div>
         </div>
       ) : (
-      <div className="dpanel" style={{ background: "linear-gradient(180deg,#0F3F63 0%,#0A2238 78%,#081B2E 100%)", borderRadius: 20, padding: "22px 20px 20px", color: "#fff", textAlign: "center" }}>
-        <div style={{ fontSize: 12, letterSpacing: "0.2em", color: mode === "work" ? "#7FD6D4" : C.yellow, fontWeight: 700 }}>
-          {mode === "work" ? "WORK — 集中タイム" : "REST — 休憩タイム"}
+      <div className="dpanel" style={{ background: "linear-gradient(180deg,#0E4A5E 0%,#08304A 55%,#062236 100%)", borderRadius: 28, padding: "18px 18px 20px", color: "#fff", textAlign: "center" }}>
+        <div style={{ display: "inline-block", fontSize: 12, fontWeight: 900, padding: "4px 14px", borderRadius: 999, background: mode === "work" ? "rgba(34,166,160,0.22)" : "rgba(242,184,75,0.2)", color: mode === "work" ? "#8FE3DF" : C.yellow }}>
+          {mode === "work" ? "集中タイム" : "休憩タイム"}
         </div>
-        <div style={{ fontSize: 58, fontWeight: 800, fontVariantNumeric: "tabular-nums", margin: "4px 0 8px" }}>{mm}:{ss}</div>
 
-        {/* 進行バー */}
-        <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "0 8px 12px" }}>
-          <div style={{ width: `${(progress * 100).toFixed(1)}%`, height: "100%", borderRadius: 3, background: mode === "work" ? "linear-gradient(90deg,#14A3A1,#7FD6D4)" : C.yellow, transition: "width 1s linear" }} />
-        </div>
+        <Porthole level={mode === "work" ? 0.12 + progress * 0.8 : 0.92 - progress * 0.8} fish={earnedFish.e} owned={earnedOwned}
+          fishSize={Math.max(stage.size, 24) * 1.7} glow={banner?.color === C.yellow} banner={banner}>
+          <div className="num" style={{ fontSize: 54, color: "#fff", lineHeight: 1, textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}>{mm}:{ss}</div>
+        </Porthole>
 
         {/* 今回獲得できる魚のプレビュー */}
         {mode === "work" && (
           <div style={{ fontSize: 12, color: "#9FD9D8", marginBottom: 12 }}>
-            このセッションで獲得：{earnedOwned ? <>{earnedFish.e} <strong>{earnedFish.name}</strong></> : <strong>？？？（おたのしみ）</strong>}
+            このセッションで獲得：{earnedOwned ? <strong>{earnedFish.name}</strong> : <strong>？？？（おたのしみ）</strong>}
           </div>
         )}
-
-        {/* ミニ水槽 */}
-        <div style={{ position: "relative", height: 100, borderRadius: 16, background: "linear-gradient(180deg,#155A8A 0%,#0E3A60 60%,#0B2C4C 100%)", overflow: "hidden", marginBottom: 14 }}>
-          {[14, 38, 70, 88].map((x, i) => (
-            <div key={i} style={{ position: "absolute", left: `${x}%`, bottom: 0, width: 6, height: 6, borderRadius: 999, background: "rgba(255,255,255,0.35)", animation: `bubble ${3 + i}s linear infinite`, animationDelay: `${i * 0.9}s` }} />
-          ))}
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 14, background: "#C9B07A", opacity: 0.85 }} />
-          <div style={{ position: "absolute", bottom: 6, left: 14, fontSize: 18 }}>🪸</div>
-          <div style={{ position: "absolute", bottom: 6, right: 18, fontSize: 16 }}>🌿</div>
-
-          {/* タスク未選択でも魚は泳ぐ */}
-          <div style={{
-            position: "absolute", top: 28,
-            left: running || progress > 0 ? `calc(${(progress * 80).toFixed(1)}% + 4%)` : "40%",
-            transition: "left 1s linear",
-            filter: banner?.color === C.yellow ? "drop-shadow(0 0 8px #F5BE3D)" : "none",
-          }}>
-            <div style={{ animation: "bob 2.4s ease-in-out infinite" }}>
-              <FishSVG type={earnedFish.e} size={Math.max(stage.size, 24) * 1.6}
-                style={{ transform: "scaleX(-1)", ...(earnedOwned ? {} : { filter: "grayscale(1) brightness(0) invert(0.45)", opacity: 0.85 }) }} />
-            </div>
-          </div>
-          {banner && (
-            <div style={{ position: "absolute", top: 6, left: 0, right: 0, fontSize: 11, color: banner.color, fontWeight: 800 }}>{banner.text}</div>
-          )}
-        </div>
 
         {/* コントロール */}
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
@@ -630,7 +638,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
       <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${settings.phoneMode ? C.aqua : C.line}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>📱 スマホ学習モード</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}><G n="phone" size={14} style={{ color: C.aqua }} /> スマホ学習モード</div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
               単語アプリ・リスニングなどスマホで勉強するとき用。他のアプリを開いても魚が逃げません。
             </div>
@@ -647,7 +655,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         {/* 繰り返しモード */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>🔁 繰り返しモード</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}><G n="repeat" size={14} style={{ color: C.aqua }} /> 繰り返しモード</div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
               休憩が終わると自動で次の集中を開始します。休憩時間を無駄にしません。
             </div>
@@ -662,7 +670,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
 
       {/* アプリ外の勉強をあとから記録 */}
       <div className="wcard" style={{ background: C.card, borderRadius: 16, padding: 16, marginTop: 14, border: `1px solid ${C.line}` }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 4 }}>✏️ あとから記録</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 4 }}><G n="pencil" size={14} style={{ color: C.aqua }} /> あとから記録</div>
         <div style={{ fontSize: 11, color: C.sub, marginBottom: 10 }}>
           タイマーを使わなかった勉強時間を手動で追加できます。上で選択中のタスクに記録されます。
         </div>
@@ -672,7 +680,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
             style={{ width: 64, padding: "8px", borderRadius: 8, border: `1px solid ${C.line}`, textAlign: "center", fontSize: 14 }} />
           <span style={{ fontSize: 12, color: C.sub }}>分</span>
           <span style={{ fontSize: 12, color: C.sub }}>
-            → {manualOwned ? `${manualFish.e} ${manualFish.name}` : "？？？"}を獲得
+            → {manualOwned ? manualFish.name : "？？？"}を獲得
           </span>
           <button onClick={addManual}
             style={{ marginLeft: "auto", padding: "9px 18px", borderRadius: 10, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>

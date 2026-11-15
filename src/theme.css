@@ -1,0 +1,57 @@
+/* FocusLap テーマ：「水族館の観察窓」
+   ・文字：Zen Maru Gothic（やわらかい丸ゴシック）＋ 数字は Fredoka
+   ・背景：水面（明るい）→ 深場（青緑）への深度グラデーション
+   ・カード：ガラス越しの水槽パネル。主役はタイマーの「舷窓（まるい窓）」 */
+@import "@fontsource/zen-maru-gothic/500.css";
+@import "@fontsource/zen-maru-gothic/700.css";
+@import "@fontsource/zen-maru-gothic/900.css";
+@import "@fontsource/fredoka/500.css";
+@import "@fontsource/fredoka/600.css";
+
+:root {
+  --abyss: #062236;
+  --tide: #0D6F73;
+  --lagoon: #22A6A0;
+  --foam: #E4F3EF;
+  --sand: #F2D9A6;
+  --coral: #F07C6B;
+}
+
+html, body {
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  color: #0B2A3C;
+}
+body {
+  background: linear-gradient(180deg, #EAF7F3 0%, #D3EEEA 38%, #A9D8D8 100%) fixed;
+  min-height: 100vh;
+}
+input, select, button, textarea { font-family: inherit; font-weight: 700; }
+input, select, textarea { font-weight: 500; }
+
+/* 数字（タイマー・統計） */
+.num { font-family: "Fredoka", "Zen Maru Gothic", sans-serif; font-weight: 600; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+
+/* ガラスの水槽パネル（白カード） */
+.wcard {
+  background: rgba(255, 255, 255, 0.84) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 10px 26px rgba(9, 72, 84, 0.10), inset 0 -3px 0 rgba(34, 166, 160, 0.10), inset 0 1.5px 0 #FFFFFF;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+/* 深場のパネル（タイマー・水槽・図鑑） */
+.dpanel {
+  box-shadow: 0 20px 44px rgba(3, 26, 40, 0.38), inset 0 1px 0 rgba(127, 214, 212, 0.28);
+  border: 1px solid rgba(127, 214, 212, 0.22) !important;
+}
+
+/* キーボード操作時のフォーカス */
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2.5px solid var(--lagoon);
+  outline-offset: 2px;
+}
+
+/* 舷窓（タイマーの丸窓）の水面がゆれる */
+@keyframes waveSlide { from { transform: translateX(0); } to { transform: translateX(-50%); } }

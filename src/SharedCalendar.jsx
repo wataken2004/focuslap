@@ -3,6 +3,7 @@ import { onAuthStateChanged, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, isFirebaseConfigured } from "./firebase.js";
 import { C, fmt, todayStr, addDays } from "./shared.jsx";
 import { FishSVG } from "./fish.jsx";
+import { G } from "./glyphs.jsx";
 import { loadShareDoc, loadGroupData } from "./storage.js";
 
 /* メンバーごとの色（uid順で割り当て） */
@@ -48,7 +49,6 @@ export function SharedCalendarPage({ shareId }) {
     <div style={{
       minHeight: "100vh",
       background: "linear-gradient(180deg,#EAF8F9 0%,#C9E7ED 38%,#ABD6E0 72%,#96C9D6 100%)",
-      fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",
       color: C.ink,
     }}>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 16px calc(30px + env(safe-area-inset-bottom))" }}>
@@ -70,7 +70,7 @@ export function SharedCalendarPage({ shareId }) {
 
         {!state.loading && state.error && (
           <div style={{ ...card, padding: 30, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🫧</div>
+            <div style={{ marginBottom: 8, color: "#7FD6D4" }}><G n="bubbles" size={36} /></div>
             <div style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>この共有リンクは無効です</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.7 }}>
               リンクが間違っているか、持ち主が共有を停止しました。
@@ -142,9 +142,9 @@ export function SharedCalendarPage({ shareId }) {
 
             {selTasks.map((t, i) => (
               <div key={`t${i}`} style={{ ...card, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, flexShrink: 0 }}>{t.done ? "✅" : "☐"}</span>
+                <span style={{ flexShrink: 0, color: t.done ? C.aqua : "#B8CDD0", lineHeight: 0 }}><G n={t.done ? "done" : "todo"} size={15} /></span>
                 <span style={{ fontSize: 13, fontWeight: 600, textDecoration: t.done ? "line-through" : "none", color: t.done ? C.sub : C.ink, flex: 1 }}>{t.title}</span>
-                {t.startTime && <span style={{ fontSize: 11, color: C.sub }}>⏰ {t.startTime}〜</span>}
+                {t.startTime && <span style={{ fontSize: 11, color: C.sub }}><G n="alarm" size={11} /> {t.startTime}〜</span>}
               </div>
             ))}
           </>
@@ -154,7 +154,7 @@ export function SharedCalendarPage({ shareId }) {
         <div style={{ textAlign: "center", marginTop: 22 }}>
           <a href={`${location.origin}${location.pathname}`}
             style={{ display: "inline-block", padding: "11px 22px", borderRadius: 999, background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 13, textDecoration: "none", boxShadow: "0 8px 20px rgba(13,60,84,0.25)" }}>
-            🐠 FocusLapで自分の魚を育てる
+            <G n="fish" size={15} /> FocusLapで自分の魚を育てる
           </a>
           <div style={{ fontSize: 10, color: C.sub, marginTop: 10 }}>
             このページは閲覧専用です。タイトルと時間だけが共有されています。
@@ -202,7 +202,7 @@ export function GroupCalendarPage({ groupId }) {
   const itemsOn = (key) => {
     const out = [];
     (g.events || []).forEach((ev) => {
-      if (ev.due === key) out.push({ ...ev, kind: "event", member: `👥${ev.createdByName || ""}`, color: "#B8860B" });
+      if (ev.due === key) out.push({ ...ev, kind: "event", member: `共有・${ev.createdByName || ""}`, color: "#B8860B" });
     });
     g.calendars.forEach((c) => {
       (c.items || []).forEach((it) => {
@@ -227,7 +227,6 @@ export function GroupCalendarPage({ groupId }) {
     <div style={{
       minHeight: "100vh",
       background: "linear-gradient(180deg,#EAF8F9 0%,#C9E7ED 38%,#ABD6E0 72%,#96C9D6 100%)",
-      fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",
       color: C.ink,
     }}>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 16px calc(30px + env(safe-area-inset-bottom))" }}>
@@ -236,7 +235,7 @@ export function GroupCalendarPage({ groupId }) {
           <FishSVG type="🐠" size={44} />
           <div>
             <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.sub, fontWeight: 700 }}>FOCUSLAP — グループカレンダー</div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>{g.group?.name ? `👥 ${g.group.name}` : "グループ"}</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{g.group?.name ? <><G n="school" size={16} /> {g.group.name}</> : "グループ"}</div>
           </div>
         </div>
 
@@ -266,7 +265,7 @@ export function GroupCalendarPage({ groupId }) {
 
         {authUser && !g.loading && g.notFound && (
           <div style={{ ...card, padding: 30, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🫧</div>
+            <div style={{ marginBottom: 8, color: "#7FD6D4" }}><G n="bubbles" size={36} /></div>
             <div style={{ fontSize: 14, fontWeight: 800 }}>グループが見つかりません</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 6 }}>リンクが間違っているか、削除された可能性があります。</div>
           </div>
@@ -274,11 +273,11 @@ export function GroupCalendarPage({ groupId }) {
 
         {authUser && !g.loading && g.notMember && (
           <div style={{ ...card, padding: 24, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
+            <div style={{ marginBottom: 8, color: "#7FD6D4" }}><G n="lock" size={34} /></div>
             <div style={{ fontSize: 14, fontWeight: 800 }}>このグループのメンバーではありません</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 8, lineHeight: 1.8 }}>
               参加するには、FocusLapアプリの<br />
-              <b>⚙️設定 → 👥グループ → コードで参加</b><br />
+              <b>右上の歯車（設定）→ グループ → コードで参加</b><br />
               にこの招待リンクを貼り付けてください。
             </div>
             <button onClick={copyCode}
@@ -365,9 +364,9 @@ export function GroupCalendarPage({ groupId }) {
 
             {selTasks.map((t, i) => (
               <div key={`t${i}`} style={{ ...card, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 6, borderLeft: `4px solid ${t.color}` }}>
-                <span style={{ fontSize: 13, flexShrink: 0 }}>{t.done ? "✅" : "☐"}</span>
+                <span style={{ flexShrink: 0, color: t.done ? C.aqua : "#B8CDD0", lineHeight: 0 }}><G n={t.done ? "done" : "todo"} size={15} /></span>
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 600, textDecoration: t.done ? "line-through" : "none", color: t.done ? C.sub : C.ink, minWidth: 0 }}>{t.title}</span>
-                {t.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}>⏰{t.startTime}</span>}
+                {t.startTime && <span style={{ fontSize: 10, color: C.sub, flexShrink: 0 }}><G n="alarm" size={10} /> {t.startTime}</span>}
                 <span style={{ fontSize: 10, fontWeight: 800, color: t.color, flexShrink: 0 }}>{t.member}</span>
               </div>
             ))}
@@ -375,7 +374,7 @@ export function GroupCalendarPage({ groupId }) {
         )}
 
         <div style={{ textAlign: "center", fontSize: 10, color: C.sub, marginTop: 20 }}>
-          共有されるのはタイトルと時間だけ。魚・メモ・進捗は共有されません 🐟
+          共有されるのはタイトルと時間だけ。魚・メモ・進捗は共有されません
         </div>
       </div>
     </div>

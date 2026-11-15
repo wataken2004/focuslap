@@ -1,3 +1,4 @@
+import { G } from "../glyphs.jsx";
 import { useState } from "react";
 import { C, uid, todayStr, TaskRow, TaskForm, FISHES } from "../shared.jsx";
 
@@ -30,15 +31,15 @@ export function GoalsTab({ data, update, growthOf, onFocus }) {
   const daysLeft = (d) => Math.ceil((new Date(d) - new Date(todayStr())) / 86400000);
   const badge = (t) =>
     t === "goal"
-      ? { label: "🎯 目標", bg: "#E6F5F5", fg: C.deepAqua }
-      : { label: "💼 仕事", bg: "#FFF3D6", fg: "#9A6B12" };
+      ? { label: <><G n="goal" size={12} /> 目標</>, bg: "#E6F5F5", fg: C.deepAqua }
+      : { label: <><G n="work" size={12} /> 仕事</>, bg: "#FFF3D6", fg: "#9A6B12" };
 
   return (
     <div>
       {/* 追加フォーム */}
       <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          {[["goal", "🎯 目標"], ["work", "💼 仕事・プロジェクト"]].map(([k, l]) => (
+          {[["goal", <><G n="goal" size={15} /> 目標</>], ["work", <><G n="work" size={15} /> 仕事・プロジェクト</>]].map(([k, l]) => (
             <button key={k} onClick={() => setType(k)}
               style={{ flex: 1, padding: "9px 0", borderRadius: 12, border: `1px solid ${type === k ? C.deepAqua : C.line}`, background: type === k ? C.deepAqua : "#fff", color: type === k ? "#fff" : C.sub, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
               {l}

@@ -16,6 +16,7 @@ const TankTab     = lazy(() => import("./tabs/TankTab.jsx").then((m) => ({ defau
 import { LoginScreen } from "./auth/LoginScreen.jsx";
 import { IconFocus, IconTasks, IconCal, IconGoals, IconTank } from "./icons.jsx";
 import { enablePush, disablePush, resyncPush } from "./push.js";
+import { G } from "./glyphs.jsx";
 
 // アプリ内通知（許可済みのときだけ）
 const appNotify = (msg) => {
@@ -42,35 +43,35 @@ const genShareId = () =>
 const HELP = {
   focus: [
     "下の魚カードで集中時間を選んでスタート。時間が長いほどレアな魚が獲れます（未獲得の魚はシルエットで、獲るまでのお楽しみ）",
-    "⏲ストップウォッチに切り替えると時間を計り上げて記録できます。「終了して記録」を押した時点の時間で魚を獲得（5分以上）",
-    "画面スリープはOK。ただし1分以上アプリを離れると魚が逃げます。スマホで勉強するときは📱スマホ学習モードをONに",
-    "🔁繰り返しモードONなら、休憩が終わると自動で次の集中が始まります",
-    "タイマーなしで勉強した分は「✏️あとから記録」で追加すれば、ちゃんと魚がもらえます",
+    "「ストップウォッチ」に切り替えると時間を計り上げて記録できます。「終了して記録」を押した時点の時間で魚を獲得（5分以上）",
+    "画面スリープはOK。ただし1分以上アプリを離れると魚が逃げます。スマホで勉強するときは「スマホ学習モード」をONに",
+    "「繰り返しモード」ONなら、休憩が終わると自動で次の集中が始まります",
+    "タイマーなしで勉強した分は「あとから記録」で追加すれば、ちゃんと魚がもらえます",
     "セッション後に進捗入力が出ます。5%刻みで積み上げて引き継ぎメモを残せば、次回は続きから取り組めます",
-    "📲プッシュ通知が有効なら、画面をロックしていても終了時刻ぴったりに集中終了をお知らせします",
+    "プッシュ通知が有効なら、画面をロックしていても終了時刻ぴったりに集中終了をお知らせします",
   ],
   tasks: [
     "①タスク名だけで追加OK。期限・開始時刻・目標との紐付けは任意です",
     "開始時刻を設定すると、その5分前に通知が届きます",
-    "🔔期限リマインドONで、期限が今日・または過ぎた未完了タスクを1時間ごとにお知らせ（8〜22時）",
-    "📲プッシュ通知を有効にすると、アプリを閉じていても通知が届きます",
-    "🔁繰り返し（毎日/毎週/隔週/毎月/隔月）が設定可能。最終日を指定するとカレンダーに全回分が並び、未指定なら完了するたび次回分が作られます",
-    "📊ボタンで進捗を5%刻みで入力。引き継ぎメモを残せば次回は続きから取り組めます。100%で自動的に完了へ",
-    "✓の丸ボタンでいつでも完了にできます（×は確認してから削除）",
-    "✎ボタンでタスク名・期限・開始時刻・繰り返し・紐付けを後から編集できます",
+    "期限リマインドONで、期限が今日・または過ぎた未完了タスクを1時間ごとにお知らせ（8〜22時）",
+    "プッシュ通知を有効にすると、アプリを閉じていても通知が届きます",
+    "繰り返し（毎日/毎週/隔週/毎月/隔月）が設定可能。最終日を指定するとカレンダーに全回分が並び、未指定なら完了するたび次回分が作られます",
+    "進捗ボタン（棒グラフ）で進捗を5%刻みで入力。引き継ぎメモを残せば次回は続きから取り組めます。100%で自動的に完了へ",
+    "左の丸ボタンでいつでも完了にできます（×は確認してから削除）",
+    "鉛筆ボタンでタスク名・期限・開始時刻・繰り返し・紐付けを後から編集できます",
   ],
   cal: [
     "月・週・日を切り替えて、日付をタップするとその日の予定とタスクが見えます",
-    "🕐予定：授業・バイト・約束など時間の約束を登録。開始5分前に通知（完了チェック不要）。時刻なしは「終日」ボタンで登録できます",
-    "👥グループに参加していれば、上の切替チップで「自分」とグループを切替。グループ表示中も自分の予定・タスクは追加できます",
-    "グループ表示中は「👥グループの予定」も追加可能。メンバー全員のカレンダーに金色で表示されます（削除は作成者のみ）",
-    "「＋この日に追加」で新規タスク、「📌既存タスクを割り振る」で持っているタスクをその日へ移動／コピーできます",
-    "コピーなら同じタスクを複数の日に置けます。開始時刻は割り振り後に✎編集で設定します",
+    "予定：授業・バイト・約束など時間の約束を登録。開始5分前に通知（完了チェック不要）。時刻なしは「終日」ボタンで登録できます",
+    "グループに参加していれば、上の切替チップで「自分」とグループを切替。グループ表示中も自分の予定・タスクは追加できます",
+    "グループ表示中は「グループの予定」も追加可能。メンバー全員のカレンダーに金色で表示されます（削除は作成者のみ）",
+    "「＋この日に追加」で新規タスク、「既存タスクを割り振る」で持っているタスクをその日へ移動／コピーできます",
+    "コピーなら同じタスクを複数の日に置けます。開始時刻は割り振り後に鉛筆ボタンで設定します",
     "タスク追加時に繰り返し＋最終日を設定すると、その期間の予定がカレンダーに全部並びます",
-    "📤 ⚙️設定からカレンダーを共有できます：閲覧専用リンク（見るだけ）と、👥グループ（メンバー同士で色分け表示）の2種類",
+    "右上の歯車（設定）からカレンダーを共有できます：閲覧専用リンク（見るだけ）と、グループ（メンバー同士で色分け表示）の2種類",
   ],
   goals: [
-    "🎯目標 / 💼仕事を追加し、タスクを紐付けて進捗バーで管理します",
+    "目標（灯台）／仕事（舵輪）を追加し、タスクを紐付けて進捗バーで管理します",
     "目標を開いて「＋タスクを追加」すると、期限・開始時刻・繰り返しまで設定して紐付けられます",
     "目標ごとに合計集中時間・セッション数・獲得した魚の内訳が見えます",
     "期限まで30日を切ると残り日数が赤く表示されます",
@@ -79,7 +80,7 @@ const HELP = {
     "泳いでいる魚や図鑑のマスをタップすると、大きく泳ぐ姿を観察できます",
     "図鑑は獲得した魚ほど中央に集まります。未獲得はシルエット＋必要時間のヒント付き",
     "振り返り：完了したタスクのカードをタップすると、メモを書いて記録できます",
-    "完了タスクの記録とメモは、タスクを×で削除しても振り返りに残り続けます（🗑で記録やメモを個別に削除もできます）",
+    "完了タスクの記録とメモは、タスクを×で削除しても振り返りに残り続けます（ごみ箱ボタンで記録やメモを個別に削除もできます）",
   ],
 };
 
@@ -87,7 +88,7 @@ function HelpSheet({ tab, title, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={(e) => e.stopPropagation()} className="sheet" style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom))" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 12 }}>💡「{title}」タブの使い方</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 12 }}><G n="tip" size={18} style={{ color: C.aqua }} /> 「{title}」タブの使い方</div>
         {HELP[tab].map((h, i) => (
           <div key={i} style={{ display: "flex", gap: 8, marginBottom: 10, fontSize: 13, color: C.ink, lineHeight: 1.6 }}>
             <span style={{ color: C.aqua, fontWeight: 800 }}>•</span>
@@ -287,7 +288,7 @@ function SettingsSheet({ user, data, update, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={(e) => e.stopPropagation()} className="sheet" style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom))" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 6 }}>⚙️ 設定</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 6 }}><G n="gear" size={17} style={{ color: C.aqua }} /> 設定</div>
 
         {/* アカウント */}
         <div style={row}>
@@ -306,7 +307,7 @@ function SettingsSheet({ user, data, update, onClose }) {
         {/* プッシュ通知 */}
         <div style={row}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>📲 プッシュ通知</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><G n="push" size={14} style={{ color: C.aqua }} /> プッシュ通知</div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>
               {user ? "アプリを閉じていても開始時刻・リマインドが届きます" : "Googleログインすると利用できます"}
             </div>
@@ -317,7 +318,7 @@ function SettingsSheet({ user, data, update, onClose }) {
         {/* 期限リマインド */}
         <div style={row}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🔔 期限リマインド</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><G n="bell" size={14} style={{ color: C.aqua }} /> 期限リマインド</div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1時間ごとに通知（8〜22時）</div>
           </div>
           {toggleBtn(data.settings.hourlyReminder, () => {
@@ -330,7 +331,7 @@ function SettingsSheet({ user, data, update, onClose }) {
 
         {/* カレンダー共有 */}
         <div style={{ ...row, borderBottom: "none", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>📤 カレンダー共有</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><G n="share" size={14} style={{ color: C.aqua }} /> カレンダー共有</div>
           {!user ? (
             <div style={{ fontSize: 11, color: C.sub }}>Googleまたはメールでログインすると使えます</div>
           ) : (
@@ -360,7 +361,7 @@ function SettingsSheet({ user, data, update, onClose }) {
 
               {/* グループ */}
               <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>
-                👥 グループ
+                <G n="school" size={14} style={{ color: C.aqua }} /> グループ
                 <span style={{ fontSize: 10, fontWeight: 600, color: C.sub, marginLeft: 6 }}>メンバー同士でカレンダーを見せ合う</span>
               </div>
               {(data.groups || []).length === 0 && (
@@ -541,7 +542,7 @@ export default function FocusLapApp() {
   // ── ローディング中 ──
   if (user === undefined) {
     return (
-      <div style={{ minHeight: "100vh", background: C.deck, display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontFamily: "sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: C.deck, display: "flex", alignItems: "center", justifyContent: "center", color: C.sub }}>
         読み込み中…
       </div>
     );
@@ -557,7 +558,7 @@ export default function FocusLapApp() {
   // ── データロード中 ──
   if (!data) {
     return (
-      <div style={{ minHeight: "100vh", background: C.deck, display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontFamily: "sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: C.deck, display: "flex", alignItems: "center", justifyContent: "center", color: C.sub }}>
         データを読み込み中…
       </div>
     );
@@ -572,9 +573,8 @@ export default function FocusLapApp() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(180deg,#EAF8F9 0%,#C9E7ED 38%,#ABD6E0 72%,#96C9D6 100%)",
+      background: "linear-gradient(180deg,#EAF7F3 0%,#CFEBE7 34%,#A6D6D6 70%,#86C3C8 100%)",
       color: C.ink,
-      fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif",
       display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto",
     }}>
       <style>{`
@@ -585,10 +585,7 @@ export default function FocusLapApp() {
         .app-paused * { animation-play-state: paused !important; }
         /* ボトムシート共通：モバイルで確実にスクロールできるようにする */
         .sheet { max-height: 85vh; max-height: 85dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
-        /* 水中の立体感：白カードはふわっと浮かせ、上辺に水面の反射ハイライト */
-        .wcard { box-shadow: 0 8px 22px rgba(13,60,84,0.12), inset 0 1.5px 0 rgba(255,255,255,0.9); }
-        /* 深海パネル（タイマー・水槽・図鑑）：深い影＋アクアの縁光 */
-        .dpanel { box-shadow: 0 18px 40px rgba(4,20,34,0.40), inset 0 1px 0 rgba(127,214,212,0.25); border: 1px solid rgba(127,214,212,0.20) !important; }
+        /* カードの見た目は src/theme.css */
         button { transition: transform .08s ease, filter .15s ease; }
         button:active { transform: scale(.96); }
         button:hover { filter: brightness(1.05); }
@@ -614,11 +611,10 @@ export default function FocusLapApp() {
         ))}
       </div>
 
-      <header style={{ padding: "18px 20px 10px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", position: "relative", zIndex: 1 }}>
+      <header style={{ padding: "20px 20px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", position: "relative", zIndex: 1 }}>
         <div>
-          <div style={{ fontSize: 11, letterSpacing: "0.18em", color: C.sub, fontWeight: 600 }}>FOCUS LAP</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>{titles[tab]}</div>
+            <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: "0.02em", color: C.ink }}>{titles[tab]}</div>
             <button onClick={() => setHelp(true)} title="このタブの使い方"
               style={{ width: 22, height: 22, borderRadius: 999, border: "1.5px solid #9FBCC4", color: C.sub, background: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: "19px", padding: 0 }}>?</button>
           </div>
@@ -628,16 +624,21 @@ export default function FocusLapApp() {
             {user ? (user.displayName || user.email) : "ゲストモード"}
           </span>
           <button onClick={() => setSettingsOpen(true)} title="設定"
-            style={{ width: 32, height: 32, borderRadius: 999, border: `1px solid ${C.line}`, background: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: 15, padding: 0 }}>
-            ⚙️
+            style={{ width: 32, height: 32, borderRadius: 999, border: `1px solid ${C.line}`, background: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: 15, padding: 0, color: C.deepAqua, display: "grid", placeItems: "center" }}>
+            <G n="gear" size={18} />
           </button>
         </div>
       </header>
+      {/* 水面のライン（ヘッダーは水上、下は水中） */}
+      <svg aria-hidden viewBox="0 0 480 14" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 14, margin: "0 0 10px", position: "relative", zIndex: 1 }}>
+        <path d="M0 7 Q 20 1 40 7 T 80 7 T 120 7 T 160 7 T 200 7 T 240 7 T 280 7 T 320 7 T 360 7 T 400 7 T 440 7 T 480 7" fill="none" stroke={C.aqua} strokeWidth="2" strokeLinecap="round" opacity="0.55" />
+        <path d="M0 11 Q 20 6 40 11 T 80 11 T 120 11 T 160 11 T 200 11 T 240 11 T 280 11 T 320 11 T 360 11 T 400 11 T 440 11 T 480 11" fill="none" stroke={C.aqua} strokeWidth="1.2" strokeLinecap="round" opacity="0.25" />
+      </svg>
 
       {/* ログイン済みで通知未設定の人への案内（1回だけ表示） */}
       {user && !pushPromptDismissed && localStorage.getItem("focuslap:pushOn") !== "1" && (
         <div style={{ margin: "0 16px 10px", padding: "10px 14px", background: "#E6F5F5", border: `1px solid ${C.aqua}`, borderRadius: 12, display: "flex", alignItems: "center", gap: 8, position: "relative", zIndex: 1 }}>
-          <span style={{ fontSize: 12, flex: 1, color: C.ink, fontWeight: 600 }}>📲 アプリを閉じていても通知を受け取れます</span>
+          <span style={{ fontSize: 12, flex: 1, color: C.ink, fontWeight: 600 }}><G n="push" size={14} style={{ color: C.deepAqua }} /> アプリを閉じていても通知を受け取れます</span>
           <button onClick={() => { setSettingsOpen(true); dismissPushPrompt(); }}
             style={{ padding: "6px 12px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>
             設定する
@@ -667,7 +668,7 @@ export default function FocusLapApp() {
           <button key={k} onClick={() => setTab(k)}
             style={{ flex: 1, padding: "8px 0 12px", background: "none", border: "none", cursor: "pointer", color: tab === k ? C.deepAqua : C.sub, fontWeight: tab === k ? 800 : 500, fontSize: 11 }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 2 }}>
-              <div style={{ padding: "3px 14px", borderRadius: 999, background: tab === k ? "#D9F0EF" : "transparent", transition: "background .2s" }}>
+              <div style={{ padding: "3px 14px", borderRadius: 999, background: tab === k ? C.deepAqua : "transparent", color: tab === k ? "#fff" : "inherit", transition: "background .2s" }}>
                 <Icon size={20} />
               </div>
             </div>

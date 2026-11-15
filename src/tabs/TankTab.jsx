@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { C, FISHES, Stat } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
+import { G, Coral, Kelp, Shell } from "../glyphs.jsx";
 
 /* ---- 魚スポットライト（タップした魚が大きく泳ぐ） ---- */
 function FishSpotlight({ fish, count, onClose }) {
@@ -13,8 +14,8 @@ function FishSpotlight({ fish, count, onClose }) {
             <div key={i} style={{ position: "absolute", left: `${x}%`, bottom: 0, width: 5 + (i % 2) * 3, height: 5 + (i % 2) * 3, borderRadius: 999, background: "rgba(255,255,255,0.3)", animation: `bubble ${3 + i}s linear infinite`, animationDelay: `${i * 0.8}s` }} />
           ))}
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 16, background: "#C9B07A" }} />
-          <div style={{ position: "absolute", bottom: 10, left: 14, fontSize: 20 }}>🪸</div>
-          <div style={{ position: "absolute", bottom: 10, right: 16, fontSize: 18 }}>🌿</div>
+          <Coral size={34} style={{ position: "absolute", bottom: 6, left: 12 }} />
+          <Kelp size={34} style={{ position: "absolute", bottom: 6, right: 14 }} />
           {/* 魚は中央に表示（左右にゆらゆら＋上下にぷかぷか） */}
           <div style={{ position: "absolute", top: 36, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
             <div style={{ animation: "spotSway 5s ease-in-out infinite" }}>
@@ -106,9 +107,9 @@ export function TankTab({ data, update }) {
           }} />
         ))}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 22, background: "#C9B07A" }} />
-        <div style={{ position: "absolute", bottom: 14, left: 16, fontSize: 24 }}>🪸</div>
-        <div style={{ position: "absolute", bottom: 14, right: 22, fontSize: 22 }}>🌿</div>
-        <div style={{ position: "absolute", bottom: 12, left: "44%", fontSize: 18 }}>🐚</div>
+        <Coral size={42} style={{ position: "absolute", bottom: 8, left: 12 }} />
+        <Kelp size={44} style={{ position: "absolute", bottom: 8, right: 16 }} />
+        <Shell size={22} style={{ position: "absolute", bottom: 6, left: "44%" }} />
 
         {swimmingFish.length === 0 && (
           <div style={{ position: "absolute", top: "40%", left: 0, right: 0, textAlign: "center", color: "#9FD9D8", fontSize: 13 }}>
@@ -145,7 +146,7 @@ export function TankTab({ data, update }) {
         <div style={{ position: "absolute", bottom: -28, left: -16, width: 80, height: 80, borderRadius: 999, background: "rgba(127,214,212,0.05)" }} />
 
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-          <div style={{ fontSize: 13, color: "#fff", fontWeight: 800 }}>📖 魚ずかん</div>
+          <div style={{ fontSize: 13, color: "#fff", fontWeight: 800 }}><G n="book" size={15} style={{ color: "#7FD6D4" }} /> 魚ずかん</div>
           <div style={{ fontSize: 11, color: "#9FD9D8", fontWeight: 700 }}>{ownedKinds}/{FISHES.length} 種類</div>
         </div>
 
@@ -196,7 +197,7 @@ export function TankTab({ data, update }) {
 
       {/* ===== 振り返り（完了したタスクのみ・タップでメモ） ===== */}
       <div className="wcard" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 4 }}>🔍 振り返り・メモ</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 4 }}><G n="search" size={15} style={{ color: C.aqua }} /> 振り返り・メモ</div>
         <div style={{ fontSize: 11, color: C.sub, marginBottom: 12 }}>
           完了したタスクをタップするとメモを書けます（{archive.length}件）。タスクを削除しても記録とメモはここに残ります
         </div>
@@ -212,8 +213,8 @@ export function TankTab({ data, update }) {
           const isEditing = editingId === t.id;
           const badge = t.goalTitle
             ? t.goalType === "work"
-              ? { label: `💼 ${t.goalTitle}`, bg: "#FFF3D6", fg: "#9A6B12" }
-              : { label: `🎯 ${t.goalTitle}`, bg: "#E6F5F5", fg: C.deepAqua }
+              ? { label: <><G n="work" size={11} /> {t.goalTitle}</>, bg: "#FFF3D6", fg: "#9A6B12" }
+              : { label: <><G n="goal" size={11} /> {t.goalTitle}</>, bg: "#E6F5F5", fg: C.deepAqua }
             : null;
           return (
             <div key={t.id}
@@ -224,7 +225,7 @@ export function TankTab({ data, update }) {
                 border: `1px solid ${isEditing ? C.aqua : memo ? "#BFE3E2" : C.line}`,
               }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>{t.fish ?? "✅"}</span>
+                <span style={{ flexShrink: 0, color: C.aqua }}>{t.fish ? <FishSVG type={t.fish} size={30} /> : <G n="done" size={20} />}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{t.title}</div>
                   <div style={{ fontSize: 11, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -236,7 +237,7 @@ export function TankTab({ data, update }) {
                 </div>
                 {!isEditing && (
                   <span style={{ fontSize: 11, color: C.deepAqua, fontWeight: 700, flexShrink: 0 }}>
-                    {memo ? "✏️ 編集" : "✏️ メモ"}
+                    <G n="pencil" size={12} /> {memo ? "編集" : "メモ"}
                   </span>
                 )}
                 {!isEditing && (
@@ -252,7 +253,7 @@ export function TankTab({ data, update }) {
                       }
                     }}
                     title="この記録を削除"
-                    style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 13, flexShrink: 0, padding: "2px 4px" }}>🗑</button>
+                    style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 13, flexShrink: 0, padding: "2px 4px", lineHeight: 0 }}><G n="trash" size={15} /></button>
                 )}
               </div>
 
@@ -281,7 +282,7 @@ export function TankTab({ data, update }) {
                           setEditingId(null);
                         }}
                         style={{ marginRight: "auto", padding: "7px 12px", borderRadius: 999, border: "1px solid #F2C9C9", background: "#FFF5F5", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                        🗑 メモを削除
+                        <G n="trash" size={13} /> メモを削除
                       </button>
                     )}
                     <button type="button" onClick={() => setEditingId(null)}

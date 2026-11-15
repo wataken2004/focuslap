@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { G } from "./glyphs.jsx";
+import { FishSVG } from "./fish.jsx";
 
 /* ---------- デザイントークン ---------- */
 export const C = {
-  ink: "#0A2238", aqua: "#14A3A1", deepAqua: "#0E7C7B",
-  yellow: "#F5BE3D", deck: "#F2F7F7", card: "#FFFFFF",
-  line: "#DCE8E8", sub: "#5B7283", red: "#E05B5B",
+  ink: "#0B2A3C", aqua: "#22A6A0", deepAqua: "#0D6F73",
+  yellow: "#F2B84B", deck: "#E4F3EF", card: "#FFFFFF",
+  line: "#D3E6E4", sub: "#58717F", red: "#E0605A",
 };
 
 /* ---------- 魚：集中時間に応じて獲得 ---------- */
@@ -137,7 +139,7 @@ export function ProgressSheet({ task, update, onClose }) {
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={(e) => e.stopPropagation()} className="sheet"
         style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "16px 20px calc(24px + env(safe-area-inset-bottom))" }}>
-        <div style={{ fontSize: 12, color: C.sub, fontWeight: 800 }}>📊 タスクの進捗</div>
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 800 }}><G n="chart" size={14} /> タスクの進捗</div>
         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, margin: "2px 0 10px" }}>{task.title}</div>
 
         <div style={{ textAlign: "center", marginBottom: 4 }}>
@@ -161,14 +163,14 @@ export function ProgressSheet({ task, update, onClose }) {
           ))}
         </div>
 
-        <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}>✏️ 引き継ぎメモ（次回の自分へ）</div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}><G n="pencil" size={13} /> 引き継ぎメモ（次回の自分へ）</div>
         <textarea value={memo} onChange={(e) => setMemo(e.target.value)}
           placeholder="例：CH3まで完了。次はCH4の演習から"
           style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, resize: "vertical", minHeight: 56, fontFamily: "inherit", marginBottom: 12 }} />
 
         <button onClick={() => save(true)}
           style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: C.deepAqua, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 8 }}>
-          ✅ 完了にする（100%）
+          <G n="done" size={17} /> 完了にする（100%）
         </button>
         <button onClick={() => save(false)}
           style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1px solid ${C.aqua}`, background: "#fff", color: C.deepAqua, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
@@ -298,8 +300,8 @@ export function TaskForm({ data, update, defaultDue = "", defaultGoalId = "", hi
           </label>
           <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>
             {repeatUntil
-              ? `🔁 ${REPEATS[repeat]}で最終日まで予定をカレンダーに入れます（${repeatDates(due || todayStr(), repeat, repeatUntil).length}回）`
-              : `🔁 最終日なし：完了するたびに次回分（${REPEATS[repeat]}）が自動で追加されます`}
+              ? `${REPEATS[repeat]}で最終日まで予定をカレンダーに入れます（${repeatDates(due || todayStr(), repeat, repeatUntil).length}回）`
+              : `最終日なし：完了するたびに次回分（${REPEATS[repeat]}）が自動で追加されます`}
           </div>
         </div>
       )}
@@ -375,7 +377,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   if (editing) {
     return (
       <div className="wcard" style={{ background: C.card, border: `2px solid ${C.aqua}`, borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}>✎ タスクを編集</div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, marginBottom: 6 }}><G n="edit" size={13} /> タスクを編集</div>
         <input value={eTitle} onChange={(e) => setETitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && saveEdit()}
           style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 14, marginBottom: 8 }} />
@@ -395,13 +397,13 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
         </div>
         <select value={eRepeat} onChange={(e) => setERepeat(e.target.value)}
           style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff", marginBottom: 8 }}>
-          <option value="">🔁 繰り返しなし</option>
-          {Object.entries(REPEATS).map(([v, l]) => <option key={v} value={v}>🔁 {l}（完了すると次回分を自動追加）</option>)}
+          <option value="">繰り返しなし</option>
+          {Object.entries(REPEATS).map(([v, l]) => <option key={v} value={v}>{l}（完了すると次回分を自動追加）</option>)}
         </select>
         <select value={eGoal} onChange={(e) => setEGoal(e.target.value)}
           style={{ width: "100%", padding: "9px 10px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: "#fff", marginBottom: 10 }}>
           <option value="">目標と紐付けない</option>
-          {data.goals.map((gg) => <option key={gg.id} value={gg.id}>{gg.type === "work" ? "💼" : "🎯"} {gg.title}</option>)}
+          {data.goals.map((gg) => <option key={gg.id} value={gg.id}>{gg.type === "work" ? "［仕事］" : "［目標］"}{gg.title}</option>)}
         </select>
         <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
           <button onClick={() => setEditing(false)}
@@ -415,7 +417,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
 
   // タスクに紐づいたセッションの中で最新のセッションから魚を取得
   const lastSession = [...data.sessions].reverse().find((s) => s.taskId === t.id);
-  const displayFish = lastSession?.fish ?? "🥚";
+  const displayFish = lastSession?.fish ?? null;
   const progress = t.progress || 0;
 
   return (
@@ -426,17 +428,19 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
           onClick={() => update((d) => applyTaskDone(d, t.id, !t.done))}
           title={t.done ? "未完了に戻す" : "完了にする"}
           style={{ width: 28, height: 28, borderRadius: 999, border: `2px solid ${t.done ? C.aqua : "#B8CDD0"}`, background: t.done ? C.aqua : "#fff", color: t.done ? "#fff" : "#C7D6D9", cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: "24px", padding: 0, flexShrink: 0 }}>
-          ✓
+          <G n="check" size={15} style={{ strokeWidth: 2.6, verticalAlign: "middle" }} />
         </button>
-        <div style={{ fontSize: 22, flexShrink: 0 }}>{displayFish}</div>
+        <div style={{ width: 34, flexShrink: 0, display: "flex", justifyContent: "center", color: "#E39A6B" }}>
+          {displayFish ? <FishSVG type={displayFish} size={34} /> : <G n="roe" size={22} />}
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, textDecoration: t.done ? "line-through" : "none", color: t.done ? C.sub : C.ink }}>{t.title}</div>
           <div style={{ fontSize: 11, color: overdue ? C.red : C.sub, marginTop: 2 }}>
             {g && <span style={{ color: C.deepAqua, fontWeight: 700 }}>● {g.title}　</span>}
             {stage.label}（{growth}回）
             {t.due ? (overdue ? `　期限超過 ${t.due}` : `　期限 ${t.due}`) : ""}
-            {t.startTime ? `　⏰ ${t.startTime}〜` : ""}
-            {t.repeat ? `　🔁${REPEATS[t.repeat]}` : ""}
+            {t.startTime && <span style={{ whiteSpace: "nowrap" }}>　<G n="alarm" size={11} /> {t.startTime}〜</span>}
+            {t.repeat && <span style={{ whiteSpace: "nowrap" }}>　<G n="repeat" size={11} /> {REPEATS[t.repeat]}</span>}
           </div>
           {/* 進捗バー（着手済みで未完了のとき） */}
           {progress > 0 && !t.done && (
@@ -450,13 +454,13 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
         </div>
         {!t.done && (
           <button onClick={() => setShowProgress(true)} title="進捗を入力"
-            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0 }}>📊</button>
+            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0, lineHeight: 0 }}><G n="chart" size={16} /></button>
         )}
         <button onClick={startEdit} title="タスクを編集"
-          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 1px" }}>✎</button>
+          style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "4px 1px", lineHeight: 0 }}><G n="edit" size={16} /></button>
         {onFocus && !t.done && (
           <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
-            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0 }}>⏱</button>
+            style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0, lineHeight: 0 }}><G n="timer" size={16} /></button>
         )}
         <button onClick={() => { if (window.confirm(`「${t.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; }); }}
           style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16, flexShrink: 0, padding: "2px 2px" }}>×</button>
@@ -473,7 +477,7 @@ export const numInput = {
 export function Stat({ label, value, accent }) {
   return (
     <div className="wcard" style={{ flex: 1, background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: "12px 8px", textAlign: "center" }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: accent ? C.deepAqua : C.ink }}>{value}</div>
+      <div className="num" style={{ fontSize: 20, color: accent ? C.deepAqua : C.ink }}>{value}</div>
       <div style={{ fontSize: 10, color: C.sub, marginTop: 2 }}>{label}</div>
     </div>
   );

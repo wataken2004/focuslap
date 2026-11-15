@@ -1,3 +1,4 @@
+import { G } from "../glyphs.jsx";
 import { C, TaskForm, TaskRow } from "../shared.jsx";
 import { useState } from "react";
 import { enablePush } from "../push.js";
@@ -34,7 +35,7 @@ export function TasksTab({ data, update, growthOf, onFocus, uid }) {
       {/* 期限リマインド */}
       <div className="wcard" style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, padding: "10px 14px", background: C.card, borderRadius: 12, border: `1px solid ${data.settings.hourlyReminder ? C.aqua : C.line}` }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>🔔 期限リマインド</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}><G n="bell" size={13} style={{ color: C.aqua }} /> 期限リマインド</div>
           <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>期限が今日・または過ぎた未完了タスクを1時間ごとに通知</div>
         </div>
         <button
@@ -52,11 +53,11 @@ export function TasksTab({ data, update, growthOf, onFocus, uid }) {
       {/* アプリを閉じていても届くプッシュ通知 */}
       <div className="wcard" style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, padding: "10px 14px", background: C.card, borderRadius: 12, border: `1px solid ${pushState === "on" ? C.aqua : C.line}` }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>📲 プッシュ通知</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}><G n="push" size={13} style={{ color: C.aqua }} /> プッシュ通知</div>
           <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>アプリを閉じていても開始時刻・リマインドが届きます</div>
         </div>
         {pushState === "on" ? (
-          <span style={{ fontSize: 12, fontWeight: 800, color: C.deepAqua, flexShrink: 0 }}>✓ 有効</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: C.deepAqua, flexShrink: 0 }}><G n="check" size={13} /> 有効</span>
         ) : (
           <button onClick={handleEnablePush} disabled={pushState === "busy"}
             style={{ padding: "7px 14px", borderRadius: 999, border: "none", background: C.aqua, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
