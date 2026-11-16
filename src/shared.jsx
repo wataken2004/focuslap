@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Sheet, SeriesSheet, titleKey, deleteTaskIds } from "./taskGroups.jsx";
+import { Sheet, SeriesSheet, sameSeries, deleteTaskIds } from "./taskGroups.jsx";
 import { G } from "./glyphs.jsx";
 import { FishSVG } from "./fish.jsx";
 
@@ -425,7 +425,8 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   const lastSession = [...data.sessions].reverse().find((s) => s.taskId === t.id);
   const displayFish = lastSession?.fish ?? null;
   const progress = t.progress || 0;
-  const siblings = data.tasks.filter((x) => x.kind !== "event" && titleKey(x) === titleKey(t));
+  // 同じ系列のタスク（削除シートを開くときだけ計算する）
+  const siblings = delChoice || seriesOpen ? sameSeries(data.tasks, t) : [];
   const removeOne = () => update((d) => deleteTaskIds(d, [t.id]));
 
   return (
@@ -490,7 +491,7 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
         )}
         <button onClick={() => {
           // 同じ名前のタスクが他にもあれば「この日だけ／まとめて」を選べるようにする
-          if (siblings.length > 1) { setDelChoice(true); return; }
+          if (sameSeries(data.tasks, t).length > 1) { setDelChoice(true); return; }
           if (window.confirm(`「${t.title}」を削除しますか？`)) removeOne();
         }}
           style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16, flexShrink: 0, padding: "2px 2px" }}>×</button>

@@ -32,6 +32,10 @@ src/
   storage.js            # Firestore or localStorage の透過ラッパー
   shared.jsx            # デザイントークン・FISHES・日付/繰り返しヘルパー・TaskForm/TaskRow等
   taskGroups.jsx        # 同名タスクのまとめ表示・まとめて削除(SeriesSheet)・集中タブのタスク選択シート/今日やること
+  daily.js              # やらなかった毎日タスクの自動スキップ（純粋関数・send-push.mjsからも使う）
+  brief.jsx             # その日最初の起動時の「今日やること」シート（TodayBrief）
+  review.jsx            # 週のふりかえり（weekSummary / WeeklyReview・水槽タブ）
+  daily.test.js         # 上記3つ＋系列キーのテスト
   taskGroups.test.js    # 上記ロジック（groupTasksByTitle/nearestOpen/deleteTaskIds/completedToday）のテスト
   shared.test.js        # 上記コアロジックのvitest単体テスト（fishForMinutes/nextRepeatDate等）
   fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント・海中イラスト調）
@@ -76,6 +80,8 @@ scripts/
     autoRepeat: boolean;      // 休憩後に自動で次の集中を開始
     hourlyReminder: boolean;  // 期限リマインド（期限が今日/過去の未完了を1時間ごと通知）
     timerKind: "timer" | "stopwatch";  // ポモドーロ / カウントアップ計測
+    skipMissedDaily: boolean; // やらなかった毎日タスクを自動で片付ける（既定ON）
+    dailyBrief: boolean;      // その日最初の起動で今日やることを表示（既定ON）
   }
   collection: { [fishEmoji: string]: number }  // 魚ごとの獲得数
   escapes: number; escapesDate: string         // 逃げた魚（日ごとにリセット）
@@ -138,9 +144,25 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - 100%で `applyTaskDone()` を呼び自動完了。FocusTabのタスク選択時に前回の進捗とメモを表示
 
 ### 同名タスクのまとめ・まとめて削除（taskGroups.jsx）
-- `groupTasksByTitle()` で同じタイトル（前後空白・大小文字無視）を1グループに。タスクタブは2件以上ならTaskGroup（折りたたみ・直近の回で集中）
+- `makeSeriesKey()`：同じタイトル（前後空白・大小文字無視）**または同じrepeatGroup**を union-find で1系列に（名前を変えた回もまとまる）。
+  キーは必ず全タスク（data.tasks）から作る。`groupTasksByTitle(tasks, allTasks)` / `sameSeries(all, t)`。表示名は最新の回のタイトル
+- `groupTasksByTitle()` で1グループに。タスクタブは2件以上ならTaskGroup（折りたたみ・直近の回で集中）
 - `SeriesSheet`：未完了すべて／完了含め全部／期間指定／日付チップ選択で一括削除。削除は `deleteTaskIds()`（archive・memos・sessionsは残す）
 - TaskRowの×は、同名が他にもあれば「この日だけ／まとめて削除」を選ぶシートを出す
+
+### やらなかった毎日タスクの自動スキップ（daily.js）
+- 対象：repeat==="daily"・未完了・期限<今日・進捗0・progressNoteなし（手を付けた回は残す）
+- repeatGroupあり→その回を削除／なし→期限を今日へ繰り越し（repeatUntil超過なら削除）
+- App.jsx：ロード時（migrateData後）と60秒ごとの日付チェックで実行。結果は TodayBrief で通知
+- send-push.mjs の期限リマインドも対象回を期限超過に数えない（アプリ未起動でも通知が増えない）
+
+### 起動時の今日やること（brief.jsx）
+- `focuslap:briefDate`（localStorage）で1日1回。予定/今日以前の未完了/片付けのお知らせがある時だけ開く
+- タスクの「集中」→ goFocus(id)。開きっぱなしで日をまたいだら60秒チェックで再表示
+
+### 週のふりかえり（review.jsx・水槽タブ）
+- 月曜はじまり。今週の途中は「先週の同じ曜日まで」と比較（partial）
+- 目標別はタスク→目標、消えていればarchiveのgoalTitleから。完了タスクはarchive.completedAt
 
 ### 集中タブのタスク選択
 - ネイティブselectは廃止。ボタン→ `TaskPickerSheet`（検索・今日やる/目標別/その他・同名はPickGroup・今日完了欄）
@@ -201,7 +223,7 @@ GitHub Actions の Admin SDK はルールをバイパスする。
 - **autoRepeat**：完了時に running を維持し `endAtRef` を直接更新して次セッションへ
 - **escapes** は日ごとにリセット（escapesDate で管理）
 - 完了時：chime（和音）＋Celebration オーバーレイ（紙吹雪・通算n匹目）＋Notification
-- タスク選択は optgroup でグループ化（今日やる→目標ごと→その他）。タスク選択時に note（今回やることメモ）を編集可
+- タスク選択は TaskPickerSheet（今日やる→目標ごと→その他）。タスク選択時に note（今回やることメモ）を編集可
 
 ### ストップウォッチモード（settings.timerKind === "stopwatch"）
 - カウントアップ計測。「終了して記録」を押した時点の分数で `fishForMinutes` の魚を獲得（5分未満は記録不可）

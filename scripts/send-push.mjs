@@ -2,6 +2,7 @@
 // 必要な環境変数:
 //   FIREBASE_SERVICE_ACCOUNT … Firebaseサービスアカウントの JSON 文字列
 //   VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY … Web Push の VAPID 鍵
+import { isMissedDaily, skipEnabled } from "../src/daily.js";
 import admin from "firebase-admin";
 import webpush from "web-push";
 
@@ -59,7 +60,8 @@ for (const userRef of userRefs) {
     // ② 期限リマインド：期限が今日or過去の未完了タスクを1時間ごと（8〜22時JST）
     if (d.settings?.hourlyReminder && nowMin >= 8 * 60 && nowMin <= 22 * 60 && Date.now() - lastDue >= 3600000) {
       const dueToday = tasks.filter((t) => !t.done && t.kind !== "event" && t.due === today);
-      const overdue = tasks.filter((t) => !t.done && t.kind !== "event" && t.due && t.due < today);
+      // 自動スキップ対象（やらなかった毎日タスク）は、アプリを開けば片付くので通知しない
+      const overdue = tasks.filter((t) => !t.done && t.kind !== "event" && t.due && t.due < today && !(skipEnabled(d) && isMissedDaily(t, today)));
       if (dueToday.length + overdue.length > 0) {
         lastDue = Date.now();
         if (dueToday.length + overdue.length === 1) {

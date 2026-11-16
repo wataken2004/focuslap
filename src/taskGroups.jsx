@@ -19,17 +19,48 @@ const byDue = (a, b) => {
   return x < y ? -1 : x > y ? 1 : 0;
 };
 
-// 同名タスクを束ねる。グループの並び順は元配列で最初に出てきた順、グループ内は期限順
-export function groupTasksByTitle(tasks) {
+// 系列キーの関数を作る。同じ繰り返し系列（repeatGroup）は名前を後から変えても同じ束に、
+// 系列が違っても同じ名前なら同じ束に入れる（素朴なunion-find）。allTasks 全体から作るので、
+// 絞り込んだ一覧でも削除シートでも同じキーになる
+export function makeSeriesKey(allTasks) {
+  const parent = new Map();
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const add = (x) => { if (!parent.has(x)) parent.set(x, x); };
+  const union = (a, b) => { add(a); add(b); const ra = find(a), rb = find(b); if (ra !== rb) parent.set(rb, ra); };
+  allTasks.forEach((t) => {
+    const tk = "t:" + titleKey(t);
+    add(tk);
+    if (t.repeatGroup) union(tk, "r:" + t.repeatGroup);
+  });
+  return (t) => {
+    const tk = "t:" + titleKey(t);
+    if (parent.has(tk)) return find(tk);
+    if (t.repeatGroup && parent.has("r:" + t.repeatGroup)) return find("r:" + t.repeatGroup);
+    return tk;
+  };
+}
+
+// 同じ系列（または同名）のタスクを all から集める
+export function sameSeries(all, t) {
+  const tasks = all.filter((x) => x.kind !== "event");
+  const key = makeSeriesKey(tasks);
+  const k = key(t);
+  return tasks.filter((x) => key(x) === k);
+}
+
+// 同名・同系列のタスクを束ねる。グループの並び順は元配列で最初に出てきた順、グループ内は期限順。
+// 表示名はいちばん新しい（期限が遅い）回のタイトル
+export function groupTasksByTitle(tasks, allTasks = tasks) {
+  const keyOf = makeSeriesKey(allTasks);
   const map = new Map();
   const out = [];
   tasks.forEach((t) => {
-    const k = titleKey(t);
+    const k = keyOf(t);
     let g = map.get(k);
     if (!g) { g = { key: k, title: t.title, items: [] }; map.set(k, g); out.push(g); }
     g.items.push(t);
   });
-  out.forEach((g) => g.items.sort(byDue));
+  out.forEach((g) => { g.items.sort(byDue); g.title = g.items[g.items.length - 1].title; });
   return out;
 }
 
@@ -223,7 +254,7 @@ export function TaskGroup({ group, data, update, growthOf, onFocus }) {
   const first = items[0], last = items[items.length - 1];
   const repeat = items.find((t) => t.repeat)?.repeat;
   // 削除はタブの絞り込みに関係なく、同名タスク全体を対象にする
-  const allSame = data.tasks.filter((t) => t.kind !== "event" && titleKey(t) === group.key);
+  const allSame = sameSeries(data.tasks, items[0]);
 
   return (
     <div style={{ marginBottom: 8 }}>
@@ -273,7 +304,7 @@ export function TaskGroup({ group, data, update, growthOf, onFocus }) {
 
 // 一覧の描画：2件以上の同名はまとめ、1件はそのまま
 export function GroupedTaskList({ tasks, data, update, growthOf, onFocus }) {
-  return groupTasksByTitle(tasks).map((g) => g.items.length > 1
+  return groupTasksByTitle(tasks, data.tasks).map((g) => g.items.length > 1
     ? <TaskGroup key={"g:" + g.key} group={g} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
     : <TaskRow key={g.items[0].id} t={g.items[0]} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />);
 }
@@ -380,7 +411,7 @@ export function TaskPickerSheet({ data, update, taskId, onSelect, onClose }) {
 
   const open = data.tasks.filter((t) => !t.done && t.kind !== "event" && (!query || t.title.toLowerCase().includes(query)));
   // 同名タスクは区分をまたいで1グループにまとめる（今日・期限超過の回があれば「今日やる」へ）
-  const groups = groupTasksByTitle(open);
+  const groups = groupTasksByTitle(open, data.tasks);
   const isToday = (g) => g.items.some((t) => t.due && t.due <= today);
   const goalOf = (g) => g.items.find((t) => t.goalId && data.goals.some((x) => x.id === t.goalId))?.goalId;
   const todayGroups = groups.filter(isToday);
@@ -400,13 +431,13 @@ export function TaskPickerSheet({ data, update, taskId, onSelect, onClose }) {
       </div>
       {gs.map((g) => g.items.length > 1
         ? <PickGroup key={g.key} g={g} taskId={taskId} onPick={pick} today={today} goals={data.goals} forceOpen={!!query}
-            onManage={(gg) => setManage({ title: gg.title, key: gg.key })} />
+            onManage={(gg) => setManage({ title: gg.title, first: gg.items[0] })} />
         : <PickRow key={g.items[0].id} t={g.items[0]} selected={g.items[0].id === taskId} onPick={pick} today={today}
             goal={data.goals.find((x) => x.id === g.items[0].goalId)} />)}
     </div>
   );
 
-  const manageItems = manage ? data.tasks.filter((t) => t.kind !== "event" && titleKey(t) === manage.key) : [];
+  const manageItems = manage ? sameSeries(data.tasks, manage.first) : [];
 
   return (
     <Sheet onClose={onClose}>
@@ -472,7 +503,7 @@ export function TodayChecklist({ data, update, taskId, onSelect }) {
     }, 380);
   };
 
-  const groups = groupTasksByTitle(todays);
+  const groups = groupTasksByTitle(todays, data.tasks);
   // 進捗は表示している行数で数える（同名の期限超過はまとめて1行＝1件）
   const total = groups.length + done.length;
 

@@ -17,6 +17,8 @@ import { LoginScreen } from "./auth/LoginScreen.jsx";
 import { IconFocus, IconTasks, IconCal, IconGoals, IconTank } from "./icons.jsx";
 import { enablePush, disablePush, resyncPush } from "./push.js";
 import { G } from "./glyphs.jsx";
+import { skipMissedDaily, countMissedDaily } from "./daily.js";
+import { TodayBrief, briefHasContent } from "./brief.jsx";
 
 // アプリ内通知（許可済みのときだけ）
 const appNotify = (msg) => {
@@ -43,6 +45,7 @@ const genShareId = () =>
 const HELP = {
   focus: [
     "上の「タスクを選ぶ」をタップすると選択画面が開きます。今日やる→目標別→その他の順に並び、同じ名前のタスク（毎日の英会話など）は1つにまとまっています。「直近を選ぶ」で今日の回を一発選択",
+    "その日最初に開くと、今日の予定とタスクをまとめて表示します。タスクの「集中」でそのまま始められます（⚙️設定でOFF可）",
     "「今日やること」の丸ボタンで完了にすると、下の「完了済み」欄に流れます（「戻す」で未完了に戻せます）",
     "下の魚カードで集中時間を選んでスタート。時間が長いほどレアな魚が獲れます（未獲得の魚はシルエットで、獲るまでのお楽しみ）",
     "「ストップウォッチ」に切り替えると時間を計り上げて記録できます。「終了して記録」を押した時点の時間で魚を獲得（5分以上）",
@@ -60,7 +63,8 @@ const HELP = {
     "繰り返し（毎日/毎週/隔週/毎月/隔月）が設定可能。最終日を指定するとカレンダーに全回分が並び、未指定なら完了するたび次回分が作られます",
     "進捗ボタン（棒グラフ）で進捗を5%刻みで入力。引き継ぎメモを残せば次回は続きから取り組めます。100%で自動的に完了へ",
     "左の丸ボタンでいつでも完了にできます（×は確認してから削除）",
-    "同じ名前のタスクは1つのカードにまとまり、タップで各日が開きます。ごみ箱ボタンの「まとめて削除」で、未完了をすべて／期間を指定／日付を選んで一括削除できます",
+    "毎日の繰り返しで、やらずに過ぎた回は自動で片付きます（進捗やメモを残した回は残ります。⚙️設定でOFF可）",
+    "同じ名前のタスク、名前を変えた同じ繰り返しのタスクは1つのカードにまとまり、タップで各日が開きます。ごみ箱ボタンの「まとめて削除」で、未完了をすべて／期間を指定／日付を選んで一括削除できます",
     "鉛筆ボタンでタスク名・期限・開始時刻・繰り返し・紐付けを後から編集できます",
   ],
   cal: [
@@ -80,6 +84,7 @@ const HELP = {
     "期限まで30日を切ると残り日数が赤く表示されます",
   ],
   tank: [
+    "「今週のふりかえり」で集中時間・先週比・目標ごとの時間・よく取り組んだタスク・終わったタスクを確認できます。‹ › で前の週も見られます",
     "泳いでいる魚や図鑑のマスをタップすると、大きく泳ぐ姿を観察できます",
     "図鑑は獲得した魚ほど中央に集まります。未獲得はシルエット＋必要時間のヒント付き",
     "振り返り：完了したタスクのカードをタップすると、メモを書いて記録できます",
@@ -139,6 +144,8 @@ function migrateData(d) {
   if (typeof d.settings.autoRepeat !== "boolean") d.settings.autoRepeat = false;
   if (typeof d.settings.hourlyReminder !== "boolean") d.settings.hourlyReminder = false;
   if (d.settings.timerKind !== "timer" && d.settings.timerKind !== "stopwatch") d.settings.timerKind = "timer";
+  if (typeof d.settings.skipMissedDaily !== "boolean") d.settings.skipMissedDaily = true; // やらなかった毎日タスクを自動で片付ける
+  if (typeof d.settings.dailyBrief !== "boolean") d.settings.dailyBrief = true;           // その日最初に開いたとき今日やることを表示
   // 逃げた魚カウントは日ごとにリセット
   if (d.escapesDate !== todayStr()) { d.escapes = 0; d.escapesDate = todayStr(); }
   d.goals.forEach((g) => { if (!g.type) g.type = "goal"; });
@@ -332,6 +339,24 @@ function SettingsSheet({ user, data, update, onClose }) {
           }, false)}
         </div>
 
+        {/* やらなかった毎日タスクの自動片付け */}
+        <div style={row}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><G n="repeat" size={14} style={{ color: C.aqua }} /> 毎日タスクの自動スキップ</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>毎日の繰り返しで、やらずに過ぎた回を期限超過に残さず自動で片付けます（進捗やメモを残した回はそのまま）</div>
+          </div>
+          {toggleBtn(data.settings.skipMissedDaily, () => update((d) => { d.settings.skipMissedDaily = !d.settings.skipMissedDaily; return d; }), false)}
+        </div>
+
+        {/* 起動時の今日やること */}
+        <div style={row}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><G n="alarm" size={14} style={{ color: C.aqua }} /> 起動時に今日やることを表示</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>その日最初にアプリを開いたとき、今日の予定とタスクをまとめて表示します</div>
+          </div>
+          {toggleBtn(data.settings.dailyBrief, () => update((d) => { d.settings.dailyBrief = !d.settings.dailyBrief; return d; }), false)}
+        </div>
+
         {/* カレンダー共有 */}
         <div style={{ ...row, borderBottom: "none", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><G n="share" size={14} style={{ color: C.aqua }} /> カレンダー共有</div>
@@ -409,6 +434,9 @@ export default function FocusLapApp() {
   const [focusTaskId, setFocusTaskId] = useState("");
   const [help, setHelp] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [skipped, setSkipped] = useState(null); // 自動で片付けた毎日タスク { removed, moved }
+  const briefChecked = useRef(false);
   const [pushPromptDismissed, setPushPromptDismissed] = useState(
     () => localStorage.getItem("focuslap:pushPrompted") === "1"
   );
@@ -504,10 +532,45 @@ export default function FocusLapApp() {
       try {
         const raw = await loadUserData(user?.uid ?? null);
         const d = raw ?? DEFAULT_DATA;
-        setData(migrateData(d));
+        const m = migrateData(d);
+        // やらなかった毎日タスクを片付ける（結果は今日のブリーフで知らせる）
+        const r = skipMissedDaily(m, todayStr());
+        if (r.removed.length || r.moved.length) setSkipped(r);
+        setData(m);
       } catch { setData(DEFAULT_DATA); }
     })();
   }, [user, guestMode]);
+
+  // その日まだ見せていなければ、中身（予定・タスク・片付けのお知らせ）があるときだけ開く
+  const maybeOpenBrief = (d, sk) => {
+    const today = todayStr();
+    if (!d.settings.dailyBrief || localStorage.getItem("focuslap:briefDate") === today) return;
+    localStorage.setItem("focuslap:briefDate", today);
+    if (briefHasContent(d, today) || sk?.removed?.length || sk?.moved?.length) setBriefOpen(true);
+  };
+
+  // 日付が変わったら（開きっぱなしで日をまたいだとき）片付けとブリーフを再実行
+  useEffect(() => {
+    if (!data) return;
+    const iv = setInterval(() => {
+      const today = todayStr();
+      if (countMissedDaily(data, today) > 0) {
+        const c = structuredClone(data);
+        setSkipped(skipMissedDaily(c, today));
+        setData(c);
+      }
+      if (!document.hidden) maybeOpenBrief(data, null);
+    }, 60000);
+    return () => clearInterval(iv);
+  }, [data]);
+
+  // その日最初の起動で「今日やること」を表示
+  useEffect(() => {
+    if (!data || briefChecked.current) return;
+    briefChecked.current = true;
+    maybeOpenBrief(data, skipped);
+  }, [data]);
+  const closeBrief = () => { setBriefOpen(false); setSkipped(null); };
 
   // データが変わったら保存（400ms デバウンス）＋共有先へカレンダーを同期
   const lastPushRef = useRef({});
@@ -664,6 +727,10 @@ export default function FocusLapApp() {
       </main>
 
       {help && <HelpSheet tab={tab} title={titles[tab]} onClose={() => setHelp(false)} />}
+      {briefOpen && (
+        <TodayBrief data={data} skipped={skipped} onClose={closeBrief}
+          onFocus={(id) => { goFocus(id); closeBrief(); }} />
+      )}
       {settingsOpen && <SettingsSheet user={user} data={data} update={update} onClose={() => setSettingsOpen(false)} />}
 
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.82)", backdropFilter: "blur(14px) saturate(1.4)", WebkitBackdropFilter: "blur(14px) saturate(1.4)", borderTop: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 -10px 28px rgba(10,44,64,0.16)", display: "flex", zIndex: 10, paddingBottom: "env(safe-area-inset-bottom)" }}>

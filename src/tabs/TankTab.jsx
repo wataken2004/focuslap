@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { C, FISHES, Stat } from "../shared.jsx";
 import { FishSVG } from "../fish.jsx";
 import { G, Coral, Kelp, Shell } from "../glyphs.jsx";
+import { WeeklyReview } from "../review.jsx";
 
 /* ---- 魚スポットライト（タップした魚が大きく泳ぐ） ---- */
 function FishSpotlight({ fish, count, onClose }) {
@@ -138,6 +139,9 @@ export function TankTab({ data, update }) {
         <Stat label="累計セッション" value={`${totalSessions}回`} />
         <Stat label="累計集中時間" value={`${Math.floor(totalMin / 60)}時間${totalMin % 60}分`} />
       </div>
+
+      {/* 週のふりかえり */}
+      <WeeklyReview data={data} />
 
       {/* 魚ずかん（水中パネル：獲得した魚は中央に集まる） */}
       <div className="dpanel" style={{ borderRadius: 20, padding: 16, marginBottom: 14, background: "linear-gradient(180deg,#11497A 0%,#0B2C4C 100%)", border: "1px solid #1B4A6E", position: "relative", overflow: "hidden" }}>
