@@ -3,6 +3,7 @@ import { C, FISHES, fishForMinutes, fmt, todayStr, addDays, uid, stageOf, Stat, 
 import { FishSVG } from "../fish.jsx";
 import { scheduleTimerPush } from "../push.js";
 import { G, Coral, Kelp } from "../glyphs.jsx";
+import { TaskPickerSheet, TodayChecklist, dueLabel } from "../taskGroups.jsx";
 
 // 完了通知（許可済みのときだけ）
 const notify = (msg) => {
@@ -167,6 +168,7 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const [progressTaskId, setProgressTaskId] = useState(null); // セッション後の進捗入力対象
   const pendingProgressRef = useRef(null);
   const [manualMin, setManualMin] = useState(25);
+  const [pickerOpen, setPickerOpen] = useState(false);
   // ストップウォッチ（カウントアップ計測）
   const [swElapsed, setSwElapsed] = useState(0); // 経過秒
   const [swRunning, setSwRunning] = useState(false);
@@ -369,16 +371,13 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
   const growth = task ? growthOf(task.id) : 0;
   const stage = stageOf(growth);
 
+  const todayKey = todayStr();
   const todaySessions = data.sessions.filter((s) => s.date === todayStr());
   const minutes = todaySessions.reduce((a, s) => a + s.minutes, 0);
-  const openTasks = data.tasks.filter((t) => !t.done && t.kind !== "event");
-  // タスク選択を見やすくグループ化（今日期限→目標ごと→その他）
-  const todayKey = todayStr();
-  const dueToday = openTasks.filter((t) => t.due === todayKey);
-  const groupedTasks = data.goals
-    .map((g) => ({ g, ts: openTasks.filter((t) => t.goalId === g.id && t.due !== todayKey) }))
-    .filter((x) => x.ts.length > 0);
-  const ungroupedTasks = openTasks.filter((t) => !t.goalId && t.due !== todayKey);
+  // 選択中のタスクが完了・削除されたら選択を外す（完了済みは「今日やること」の完了欄へ流れる）
+  useEffect(() => {
+    if (taskId && (!task || task.done)) setTaskId("");
+  }, [taskId, task?.done]);
 
   const week = useMemo(() => [...Array(7)].map((_, i) => {
     const d = addDays(new Date(), -(6 - i));
@@ -420,26 +419,29 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         <ProgressSheet task={data.tasks.find((t) => t.id === progressTaskId)} update={update} onClose={() => setProgressTaskId(null)} />
       )}
 
-      {/* タスク選択 */}
-      <select value={taskId} onChange={(e) => setTaskId(e.target.value)}
-        style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, fontSize: 14, color: C.ink, marginBottom: 8 }}>
-        <option value="">— 取り組むタスクを選ぶ —</option>
-        {dueToday.length > 0 && (
-          <optgroup label="今日やる">
-            {dueToday.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-          </optgroup>
-        )}
-        {groupedTasks.map(({ g, ts }) => (
-          <optgroup key={g.id} label={`${g.type === "work" ? "［仕事］" : "［目標］"}${g.title}`}>
-            {ts.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-          </optgroup>
-        ))}
-        {ungroupedTasks.length > 0 && (
-          <optgroup label="その他">
-            {ungroupedTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-          </optgroup>
-        )}
-      </select>
+      {pickerOpen && (
+        <TaskPickerSheet data={data} update={update} taskId={taskId} onSelect={setTaskId} onClose={() => setPickerOpen(false)} />
+      )}
+
+      {/* タスク選択（タップで選択シートを開く） */}
+      <button onClick={() => setPickerOpen(true)}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 14, border: `1.5px solid ${task ? C.aqua : C.line}`, background: task ? "#F0FAFA" : C.card, cursor: "pointer", textAlign: "left", marginBottom: 8 }}>
+        <span style={{ width: 32, height: 32, borderRadius: 10, background: task ? C.aqua : "#E6F5F5", color: task ? "#fff" : C.deepAqua, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <G n={task ? "timer" : "plus"} size={18} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.sub }}>{task ? "取り組むタスク" : "タスクを選ぶ（任意）"}</span>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: task ? C.ink : C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {task ? task.title : "— タップして選ぶ —"}
+          </span>
+          {task && (
+            <span style={{ display: "block", fontSize: 11, color: task.due && task.due < todayKey ? C.red : C.sub }}>
+              {dueLabel(task.due, todayKey)}{task.startTime && `　${task.startTime}〜`}
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: C.deepAqua, flexShrink: 0 }}>{task ? "変更" : "選ぶ"}</span>
+      </button>
 
       {/* 前回の進捗・引き継ぎメモ（続きから取り組むため） */}
       {task && (task.progress || task.progressNote) && (
@@ -558,6 +560,9 @@ export function FocusTab({ data, update, growthOf, taskId, setTaskId }) {
         </button>
       </div>
       )}
+
+      {/* 今日やること（完了すると下の「完了済み」へ流れる） */}
+      <TodayChecklist data={data} update={update} taskId={taskId} onSelect={setTaskId} />
 
       {/* 今日の獲得魚 */}
       {Object.keys(todayFishCounts).length > 0 && (

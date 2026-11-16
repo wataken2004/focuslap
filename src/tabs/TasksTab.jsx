@@ -1,5 +1,6 @@
 import { G } from "../glyphs.jsx";
-import { C, TaskForm, TaskRow } from "../shared.jsx";
+import { C, TaskForm } from "../shared.jsx";
+import { GroupedTaskList } from "../taskGroups.jsx";
 import { useState } from "react";
 import { enablePush } from "../push.js";
 
@@ -79,9 +80,8 @@ export function TasksTab({ data, update, growthOf, onFocus, uid }) {
           タスクがありません。上のフォームから追加できます。
         </div>
       )}
-      {shown.map((t) => (
-        <TaskRow key={t.id} t={t} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
-      ))}
+      {/* 同じ名前のタスク（毎日の繰り返し等）は1つにまとめ、タップで開く */}
+      <GroupedTaskList tasks={shown} data={data} update={update} growthOf={growthOf} onFocus={onFocus} />
     </div>
   );
 }

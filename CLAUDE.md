@@ -31,6 +31,8 @@ src/
   firebase.js           # Firebase初期化（env未設定時は無効化）
   storage.js            # Firestore or localStorage の透過ラッパー
   shared.jsx            # デザイントークン・FISHES・日付/繰り返しヘルパー・TaskForm/TaskRow等
+  taskGroups.jsx        # 同名タスクのまとめ表示・まとめて削除(SeriesSheet)・集中タブのタスク選択シート/今日やること
+  taskGroups.test.js    # 上記ロジック（groupTasksByTitle/nearestOpen/deleteTaskIds/completedToday）のテスト
   shared.test.js        # 上記コアロジックのvitest単体テスト（fishForMinutes/nextRepeatDate等）
   fish.jsx              # オリジナル魚SVG（11種・FishSVGコンポーネント・海中イラスト調）
   glyphs.jsx            # 絵文字の代わりのオリジナル図柄 <G n> と水槽の飾り（Coral/Kelp/Shell）
@@ -134,6 +136,16 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 - `shared.jsx: ProgressSheet` — 5%刻みで進捗を積み上げ、引き継ぎメモ（progressNote）を残せる
 - セッション完了後（非autoRepeat／ストップウォッチ）に自動表示。TaskRowの📊ボタンでいつでも開ける
 - 100%で `applyTaskDone()` を呼び自動完了。FocusTabのタスク選択時に前回の進捗とメモを表示
+
+### 同名タスクのまとめ・まとめて削除（taskGroups.jsx）
+- `groupTasksByTitle()` で同じタイトル（前後空白・大小文字無視）を1グループに。タスクタブは2件以上ならTaskGroup（折りたたみ・直近の回で集中）
+- `SeriesSheet`：未完了すべて／完了含め全部／期間指定／日付チップ選択で一括削除。削除は `deleteTaskIds()`（archive・memos・sessionsは残す）
+- TaskRowの×は、同名が他にもあれば「この日だけ／まとめて削除」を選ぶシートを出す
+
+### 集中タブのタスク選択
+- ネイティブselectは廃止。ボタン→ `TaskPickerSheet`（検索・今日やる/目標別/その他・同名はPickGroup・今日完了欄）
+- `TodayChecklist`：期限が今日以前の未完了を表示。完了すると「完了済み」欄へ流れる（completedTodayはarchiveのcompletedAtで判定）
+- 選択中タスクが完了・削除されたら選択を外す
 
 ### アーカイブの仕組み
 - 完了処理は `shared.jsx: applyTaskDone(d, taskId, done)` に集約（チェックボックス・進捗100%・編集が共用）。

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Sheet, SeriesSheet, titleKey, deleteTaskIds } from "./taskGroups.jsx";
 import { G } from "./glyphs.jsx";
 import { FishSVG } from "./fish.jsx";
 
@@ -135,7 +137,8 @@ export function ProgressSheet({ task, update, onClose }) {
     onClose();
   };
 
-  return (
+  // body直下に描画（ナビより手前に出す）
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 998, background: "rgba(6,18,32,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={(e) => e.stopPropagation()} className="sheet"
         style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "20px 20px 0 0", padding: "16px 20px calc(24px + env(safe-area-inset-bottom))" }}>
@@ -177,7 +180,8 @@ export function ProgressSheet({ task, update, onClose }) {
           {p >= 100 ? "完了して保存" : `${p}%で保存（続きは次回）`}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -334,6 +338,8 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   const [eStart, setEStart] = useState("");
   const [eGoal, setEGoal] = useState("");
   const [eRepeat, setERepeat] = useState("");
+  const [delChoice, setDelChoice] = useState(false);
+  const [seriesOpen, setSeriesOpen] = useState(false);
 
   const startEdit = () => {
     setETitle(t.title);
@@ -419,10 +425,30 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
   const lastSession = [...data.sessions].reverse().find((s) => s.taskId === t.id);
   const displayFish = lastSession?.fish ?? null;
   const progress = t.progress || 0;
+  const siblings = data.tasks.filter((x) => x.kind !== "event" && titleKey(x) === titleKey(t));
+  const removeOne = () => update((d) => deleteTaskIds(d, [t.id]));
 
   return (
     <>
       {showProgress && <ProgressSheet task={t} update={update} onClose={() => setShowProgress(false)} />}
+      {seriesOpen && <SeriesSheet title={t.title} items={siblings} update={update} onClose={() => setSeriesOpen(false)} />}
+      {delChoice && (
+        <Sheet onClose={() => setDelChoice(false)}>
+          <div style={{ fontSize: 12, color: C.sub, fontWeight: 800 }}><G n="trash" size={14} /> 削除</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, margin: "2px 0 4px" }}>{t.title}</div>
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>同じ名前のタスクが全部で{siblings.length}件あります</div>
+          <button onClick={() => { removeOne(); setDelChoice(false); }}
+            style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1.5px solid ${C.red}`, background: "#fff", color: C.red, fontWeight: 800, fontSize: 14, cursor: "pointer", marginBottom: 8 }}>
+            この{t.due ? `日（${t.due}）` : "1件"}だけ削除
+          </button>
+          <button onClick={() => { setDelChoice(false); setSeriesOpen(true); }}
+            style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: C.red, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", marginBottom: 8 }}>
+            まとめて削除…（全部・期間・日付を指定）
+          </button>
+          <button onClick={() => setDelChoice(false)}
+            style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>キャンセル</button>
+        </Sheet>
+      )}
       <div className="wcard" style={{ background: C.card, border: `1px solid ${t.done ? C.line : progress >= 100 ? C.aqua : C.line}`, borderRadius: 14, padding: "11px 10px 11px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <button
           onClick={() => update((d) => applyTaskDone(d, t.id, !t.done))}
@@ -462,7 +488,11 @@ export function TaskRow({ t, data, update, growthOf, onFocus }) {
           <button onClick={() => onFocus(t.id)} title="このタスクで集中する"
             style={{ border: "none", background: "#E6F5F5", color: C.deepAqua, cursor: "pointer", fontSize: 14, borderRadius: 10, padding: "6px 7px", flexShrink: 0, lineHeight: 0 }}><G n="timer" size={16} /></button>
         )}
-        <button onClick={() => { if (window.confirm(`「${t.title}」を削除しますか？`)) update((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; }); }}
+        <button onClick={() => {
+          // 同じ名前のタスクが他にもあれば「この日だけ／まとめて」を選べるようにする
+          if (siblings.length > 1) { setDelChoice(true); return; }
+          if (window.confirm(`「${t.title}」を削除しますか？`)) removeOne();
+        }}
           style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontSize: 16, flexShrink: 0, padding: "2px 2px" }}>×</button>
       </div>
     </>
