@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "./firebase.js";
 import {
-  loadUserData, saveUserData,
+  loadUserData, saveUserData, subscribeUserData, saveMerged,
   saveShareDoc, deleteShareDoc,
   createGroupDocs, joinGroupDocs, leaveGroupDocs, saveGroupCalendar,
 } from "./storage.js";
@@ -18,6 +18,7 @@ import { IconFocus, IconTasks, IconCal, IconGoals, IconTank } from "./icons.jsx"
 import { enablePush, disablePush, resyncPush } from "./push.js";
 import { G } from "./glyphs.jsx";
 import { skipMissedDaily, countMissedDaily } from "./daily.js";
+import { merge3, sameData } from "./sync.js";
 import { TodayBrief, briefHasContent } from "./brief.jsx";
 
 // アプリ内通知（許可済みのときだけ）
@@ -46,6 +47,7 @@ const HELP = {
   focus: [
     "上の「タスクを選ぶ」をタップすると選択画面が開きます。今日やる→目標別→その他の順に並び、同じ名前のタスク（毎日の英会話など）は1つにまとまっています。「直近を選ぶ」で今日の回を一発選択",
     "その日最初に開くと、今日の予定とタスクをまとめて表示します。タスクの「集中」でそのまま始められます（⚙️設定でOFF可）",
+    "今日できないタスクは「明日へ」で期限を明日に回せます（毎日の繰り返しで明日の回があるときは、今日の回を片付けます）",
     "「今日やること」の丸ボタンで完了にすると、下の「完了済み」欄に流れます（「戻す」で未完了に戻せます）",
     "下の魚カードで集中時間を選んでスタート。時間が長いほどレアな魚が獲れます（未獲得の魚はシルエットで、獲るまでのお楽しみ）",
     "「ストップウォッチ」に切り替えると時間を計り上げて記録できます。「終了して記録」を押した時点の時間で魚を獲得（5分以上）",
@@ -531,6 +533,7 @@ export default function FocusLapApp() {
     (async () => {
       try {
         const raw = await loadUserData(user?.uid ?? null);
+        baseRef.current = raw ? structuredClone(raw) : null; // サーバーと一致している状態（マージの基準）
         const d = raw ?? DEFAULT_DATA;
         const m = migrateData(d);
         // やらなかった毎日タスクを片付ける（結果は今日のブリーフで知らせる）
@@ -572,12 +575,68 @@ export default function FocusLapApp() {
   }, [data]);
   const closeBrief = () => { setBriefOpen(false); setSkipped(null); };
 
+  // ── 保存と端末間の同期 ──
+  // baseRef：この端末が最後にサーバーと一致していたデータ。保存は「base→今の差分」をサーバーの最新に重ねる（sync.js）
+  // ので、スマホとPCで同時に開いていても、古い画面が新しい変更を上書きしない
+  const baseRef = useRef(null);
+  const dataRef = useRef(null);
+  dataRef.current = data;
+  const userRef = useRef(user);
+  userRef.current = user;
+  const savingRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const retryRef = useRef(null);
+
+  const flush = async () => {
+    const local = dataRef.current;
+    if (!local) return;
+    const uid = userRef.current?.uid ?? null;
+    if (!uid) { saveUserData(null, local).catch(() => {}); return; }
+    if (savingRef.current) { dirtyRef.current = true; return; }
+    if (sameData(local, baseRef.current)) return;
+    savingRef.current = true;
+    try {
+      const merged = await saveMerged(uid, baseRef.current, local);
+      baseRef.current = merged;
+      // 他の端末の変更が混ざっていれば画面にも反映（保存中にこの端末で変えた分は残す）
+      if (!sameData(merged, local)) setData((cur) => merge3(local, cur, merged));
+    } catch (e) {
+      console.error("save failed (will retry)", e);
+      clearTimeout(retryRef.current);
+      retryRef.current = setTimeout(flush, 15000);
+    } finally {
+      savingRef.current = false;
+      if (dirtyRef.current) { dirtyRef.current = false; flush(); }
+    }
+  };
+
+  // 他の端末での変更を受け取って、この端末の未保存の変更と重ねる
+  const loaded = !!data;
+  useEffect(() => {
+    if (!user || !loaded) return;
+    return subscribeUserData(user.uid, (remote) => {
+      if (sameData(remote, baseRef.current)) return; // 自分が保存した内容の反映
+      const cur = dataRef.current;
+      const merged = merge3(baseRef.current, cur, remote);
+      baseRef.current = remote;
+      if (!sameData(merged, cur)) setData(migrateData(structuredClone(merged)));
+    });
+  }, [user, loaded]);
+
+  // 画面を離れるときはすぐ保存
+  useEffect(() => {
+    const onHide = () => { if (document.hidden) flush(); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("online", flush);
+    return () => { document.removeEventListener("visibilitychange", onHide); window.removeEventListener("online", flush); };
+  }, []);
+
   // データが変わったら保存（400ms デバウンス）＋共有先へカレンダーを同期
   const lastPushRef = useRef({});
   useEffect(() => {
     if (!data) return;
     const t = setTimeout(() => {
-      saveUserData(user?.uid ?? null, data).catch((e) => console.error("save failed", e));
+      flush();
       if (user) {
         const items = calendarItems(data);
         const json = JSON.stringify(items);
@@ -728,7 +787,7 @@ export default function FocusLapApp() {
 
       {help && <HelpSheet tab={tab} title={titles[tab]} onClose={() => setHelp(false)} />}
       {briefOpen && (
-        <TodayBrief data={data} skipped={skipped} onClose={closeBrief}
+        <TodayBrief data={data} update={update} skipped={skipped} onClose={closeBrief}
           onFocus={(id) => { goFocus(id); closeBrief(); }} />
       )}
       {settingsOpen && <SettingsSheet user={user} data={data} update={update} onClose={() => setSettingsOpen(false)} />}

@@ -4,7 +4,7 @@
    - タスクをタップするとそのタスクで集中タブへ */
 import { C, todayStr, fmt, addDays } from "./shared.jsx";
 import { G } from "./glyphs.jsx";
-import { Sheet, groupTasksByTitle, nearestOpen, dueLabel } from "./taskGroups.jsx";
+import { Sheet, groupTasksByTitle, nearestOpen, dueLabel, postponeTask } from "./taskGroups.jsx";
 
 const WD = "日月火水木金土";
 
@@ -19,7 +19,7 @@ export const countTitles = (titles) => {
 export const briefHasContent = (data, today) =>
   data.tasks.some((t) => (t.kind === "event" ? t.due === today : !t.done && t.due && t.due <= today));
 
-export function TodayBrief({ data, skipped, onClose, onFocus }) {
+export function TodayBrief({ data, update, skipped, onClose, onFocus }) {
   const today = todayStr();
   const now = new Date();
   const yesterday = fmt(addDays(now, -1));
@@ -83,21 +83,27 @@ export function TodayBrief({ data, skipped, onClose, onFocus }) {
         const overdue = t.due < today;
         const extra = g.items.length - 1;
         return (
-          <button key={g.key} onClick={() => onFocus(t.id)}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", marginBottom: 4, borderRadius: 12, border: `1px solid ${C.line}`, background: "#fff", cursor: "pointer", textAlign: "left" }}>
-            <span className="num" style={{ width: 42, fontSize: 12, color: t.startTime ? C.deepAqua : "#B8CDD0", flexShrink: 0 }}>{t.startTime || "--:--"}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
-              <span style={{ display: "block", fontSize: 11, color: overdue ? C.red : C.sub }}>
-                {overdue ? dueLabel(t.due, today) : "今日"}
-                {extra > 0 && `　ほか期限超過${extra}件`}
-                {t.progress > 0 && <span style={{ color: C.deepAqua, fontWeight: 800 }}>　{t.progress}%</span>}
+          <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <button onClick={() => onFocus(t.id)}
+              style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 12, border: `1px solid ${C.line}`, background: "#fff", cursor: "pointer", textAlign: "left" }}>
+              <span className="num" style={{ width: 42, fontSize: 12, color: t.startTime ? C.deepAqua : "#B8CDD0", flexShrink: 0 }}>{t.startTime || "--:--"}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                <span style={{ display: "block", fontSize: 11, color: overdue ? C.red : C.sub }}>
+                  {overdue ? dueLabel(t.due, today) : "今日"}
+                  {extra > 0 && `　ほか期限超過${extra}件`}
+                  {t.progress > 0 && <span style={{ color: C.deepAqua, fontWeight: 800 }}>　{t.progress}%</span>}
+                </span>
               </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 800, color: C.deepAqua, background: "#E6F5F5", borderRadius: 999, padding: "5px 9px", flexShrink: 0 }}>
-              <G n="timer" size={13} /> 集中
-            </span>
-          </button>
+              <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 800, color: C.deepAqua, background: "#E6F5F5", borderRadius: 999, padding: "5px 9px", flexShrink: 0 }}>
+                <G n="timer" size={13} /> 集中
+              </span>
+            </button>
+            <button onClick={() => update((d) => { postponeTask(d, t.id, today); return d; })} aria-label={`${t.title}を明日へ回す`}
+              style={{ flexShrink: 0, alignSelf: "stretch", padding: "0 9px", borderRadius: 12, border: `1px solid ${C.line}`, background: "#F4FAFA", color: C.sub, fontSize: 11, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+              明日へ
+            </button>
+          </div>
         );
       })}
 

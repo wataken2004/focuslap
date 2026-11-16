@@ -84,6 +84,21 @@ export function deleteTaskIds(d, ids) {
   return d;
 }
 
+// タスクを明日へ回す。同じ系列の回が明日にもう未完了であるなら（毎日の繰り返し等）、
+// 重ならないよう今日の回を片付ける（進捗やメモがある回は消さずに移す）。戻り値："moved" | "skipped" | null
+export function postponeTask(d, id, today = todayStr()) {
+  const t = d.tasks.find((x) => x.id === id);
+  if (!t || t.done) return null;
+  const tomorrow = fmt(addDays(new Date(today + "T00:00:00"), 1));
+  const hasTomorrow = sameSeries(d.tasks, t).some((x) => x.id !== id && !x.done && x.due === tomorrow);
+  if (hasTomorrow && !(t.progress > 0) && !t.progressNote && !t.note) {
+    deleteTaskIds(d, [id]);
+    return "skipped";
+  }
+  t.due = tomorrow;
+  return "moved";
+}
+
 // 今日完了したタスク（アーカイブの completedAt で判定）。完了した順
 export function completedToday(data, today = todayStr()) {
   const order = (data.archive || []).filter((a) => a.completedAt === today).map((a) => a.id);
@@ -503,6 +518,11 @@ export function TodayChecklist({ data, update, taskId, onSelect }) {
     }, 380);
   };
 
+  const postpone = (id) => {
+    setJustDone(null);
+    update((d) => { postponeTask(d, id, today); return d; });
+    if (id === taskId) onSelect("");
+  };
   const groups = groupTasksByTitle(todays, data.tasks);
   // 進捗は表示している行数で数える（同名の期限超過はまとめて1行＝1件）
   const total = groups.length + done.length;
@@ -544,7 +564,9 @@ export function TodayChecklist({ data, update, taskId, onSelect }) {
                 {t.progress > 0 && <span style={{ color: C.deepAqua, fontWeight: 800 }}>　{t.progress}%</span>}
               </span>
             </button>
-            <span style={{ fontSize: 11, fontWeight: 800, color: sel ? C.deepAqua : C.sub, flexShrink: 0 }}>{sel ? "集中中" : ""}</span>
+            {sel && <span style={{ fontSize: 11, fontWeight: 800, color: C.deepAqua, flexShrink: 0 }}>集中中</span>}
+            <button onClick={() => postpone(t.id)} title="明日へ回す" aria-label={`${t.title}を明日へ回す`}
+              style={{ flexShrink: 0, padding: "5px 9px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#fff", color: C.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>明日へ</button>
           </div>
         );
       })}

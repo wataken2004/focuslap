@@ -1,5 +1,6 @@
 import { isFirebaseConfigured, db } from "./firebase.js";
-import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, runTransaction } from "firebase/firestore";
+import { merge3 } from "./sync.js";
 
 /** ユーザーIDに紐づいたデータを取得 */
 export async function loadUserData(uid) {
@@ -26,6 +27,35 @@ export async function saveUserData(uid, data) {
     }
   }
   localStorage.setItem("focuslap:data", JSON.stringify(data));
+}
+
+/** サーバーの最新データを受け取り続ける（他の端末での変更を反映するため）。解除関数を返す */
+export function subscribeUserData(uid, onRemote) {
+  if (!isFirebaseConfigured || !uid) return () => {};
+  return onSnapshot(doc(db, "users", uid, "data", "main"), (snap) => {
+    // 自分の書き込み待ちの状態は無視（確定したサーバー値だけを受け取る）
+    if (snap.metadata.hasPendingWrites || !snap.exists()) return;
+    onRemote(snap.data().payload);
+  }, (e) => console.error("snapshot failed", e));
+}
+
+/** この端末の変更（base→local）をサーバーの最新に重ねて保存する。保存した内容を返す。
+ *  ログインしていなければ localStorage にそのまま保存して null を返す */
+export async function saveMerged(uid, base, local) {
+  if (!isFirebaseConfigured || !uid) {
+    localStorage.setItem("focuslap:data", JSON.stringify(local));
+    return null;
+  }
+  const ref = doc(db, "users", uid, "data", "main");
+  // 念のための控え（オフラインで失敗しても端末に最新が残る）
+  try { localStorage.setItem(`focuslap:backup:${uid}`, JSON.stringify(local)); } catch {}
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const remote = snap.exists() ? snap.data().payload : null;
+    const merged = merge3(base, local, remote);
+    tx.set(ref, { payload: merged });
+    return merged;
+  });
 }
 
 /* ---------- カレンダー共有（shares/{shareId}・閲覧専用の秘密リンク） ---------- */

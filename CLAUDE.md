@@ -35,6 +35,8 @@ src/
   daily.js              # やらなかった毎日タスクの自動スキップ（純粋関数・send-push.mjsからも使う）
   brief.jsx             # その日最初の起動時の「今日やること」シート（TodayBrief）
   review.jsx            # 週のふりかえり（weekSummary / WeeklyReview・水槽タブ）
+  sync.js               # 複数端末の3者マージ merge3(base, local, remote)（純粋関数）
+  sync.test.js / storage.sync.test.js  # マージ・明日へ／Firestoreもどきで2台同時保存のテスト
   daily.test.js         # 上記3つ＋系列キーのテスト
   taskGroups.test.js    # 上記ロジック（groupTasksByTitle/nearestOpen/deleteTaskIds/completedToday）のテスト
   shared.test.js        # 上記コアロジックのvitest単体テスト（fishForMinutes/nextRepeatDate等）
@@ -111,6 +113,20 @@ Session = { date: string, minutes: number, taskId: string|null, fish: string,
 その他のFirestoreコレクション：
 - `users/{uid}/push/{key}` — Web Push購読情報（subのJSON文字列）
 - `users/{uid}/pushMeta/state` — 送信済みキー sent（重複防止）と lastDue（期限リマインドのthrottle）
+
+### 保存と端末間の同期（App.jsx flush / storage.js / sync.js）
+- 丸ごと上書きはしない。`baseRef`＝最後にサーバーと一致したデータ。保存は `saveMerged(uid, base, local)`＝
+  runTransactionでサーバー最新を読み `merge3(base, local, remote)` を書く（この端末で変えた所だけ重ねる）
+- `subscribeUserData`（onSnapshot）で他端末の変更を受信し、未保存の変更とマージして画面に反映
+- merge3：id配列（tasks/goals/archive/groups）は要素ごと（両方変更→この端末優先、削除vs変更→変更を残す）、
+  sessionsは同内容の件数差分、collectionは数の差分、memos/settingsはキーごと、escapesは新しい日付/多い方
+- 保存は1本ずつ直列（savingRef/dirtyRef）。失敗時は15秒後に再試行、online・画面離脱時にもflush。
+  控えは localStorage `focuslap:backup:${uid}`。ゲストは従来どおり `focuslap:data`
+- **payloadにトップレベルのフィールドを足したら merge3 の扱い（単純値で良いか）を確認すること**
+
+### 明日へ回す（taskGroups.jsx: postponeTask）
+- TodayChecklist・TodayBriefの「明日へ」。期限を今日+1日に。同じ系列の未完了が明日にあれば（毎日の繰り返し）今日の回を削除
+  （進捗・メモ・今回やることメモがある回は削除せず移動）
 
 ### マイグレーション
 `App.jsx: migrateData()` がロード時に旧形式変換・新フィールド補完・escapesの日次リセット・
